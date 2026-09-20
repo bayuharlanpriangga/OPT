@@ -35,6 +35,7 @@ interface AppContextType {
 
   viewResultTestType: TestType | null;
   setViewResultTestType: (testType: TestType | null) => void;
+  showResult: (testType: TestType) => void;
 
   userAnswers: Record<string, number>;
   saveAnswer: (questionId: string, value: number) => void;
@@ -121,12 +122,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const section = parts[0];
       const param = parts[1] as TestType | 'grand_assessment' | undefined;
 
-      if (section === 'test' && param) {
+      if (section === 'test') {
         setActiveTabState('test');
-        setActiveTestType(param);
-      } else if (section === 'result' && param) {
+        if (param) setActiveTestType(param);
+      } else if (section === 'result') {
         setActiveTabState('result');
-        setViewResultTestType(param as TestType);
+        if (param) setViewResultTestType(param as TestType);
       } else if (['dashboard', 'passport', 'library', 'match'].includes(section)) {
         setActiveTabState(section as AppTab);
       } else {
@@ -179,6 +180,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveTabState('result');
       updateHash('result', testType);
     }
+  }, [updateHash]);
+
+  const showResult = useCallback((testType: TestType) => {
+    setViewResultTestType(testType);
+    setActiveTabState('result');
+    updateHash('result', testType);
   }, [updateHash]);
 
   // Apply theme class to document element
@@ -376,6 +383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startTest,
         viewResultTestType,
         setViewResultTestType: setViewResult,
+        showResult,
         userAnswers,
         saveAnswer,
         allResults,

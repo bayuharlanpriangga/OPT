@@ -64,6 +64,44 @@ export const TestResultView: React.FC = () => {
         </div>
       </div>
 
+      {/* Module Completion Announcement Banner */}
+      <div className="rounded-m3-xl bg-linear-to-r from-primary-container/80 via-surface-container to-surface-container-high border-2 border-primary/30 p-5 md:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fade-in">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-xs">
+            <span className="material-symbols-outlined text-[26px]">verified</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary bg-surface/80 px-2 py-0.5 rounded-full border border-primary/20">
+              {language === 'id' ? 'Hasil Analisis Selesai' : 'Analysis Complete'}
+            </span>
+            <h2 className="text-xl md:text-2xl font-black text-on-surface mt-1">
+              {language === 'id' ? `Profil Hasil: ${testMeta.title.id}` : `Your Result: ${testMeta.title.en}`}
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <M3Button
+            variant="tonal"
+            size="sm"
+            icon="share"
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({
+                  title: `Hasil Tes ${testMeta.title[language]}`,
+                  url: window.location.href,
+                }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert(language === 'id' ? 'Tautan hasil tersalin!' : 'Result link copied!');
+              }
+            }}
+          >
+            {language === 'id' ? 'Bagikan' : 'Share'}
+          </M3Button>
+        </div>
+      </div>
+
       {/* Render Specific Test Result */}
       {viewResultTestType === 'mbti' && <MBTIResultDetail />}
       {viewResultTestType === 'enneagram' && <EnneagramResultDetail />}

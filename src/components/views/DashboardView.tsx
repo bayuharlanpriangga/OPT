@@ -9,6 +9,7 @@ export const DashboardView: React.FC = () => {
   const {
     language,
     startTest,
+    showResult,
     setViewResultTestType,
     setActiveTab,
     isCompleted,
@@ -22,8 +23,7 @@ export const DashboardView: React.FC = () => {
 
   const handleTestCardClick = (testId: TestType) => {
     if (isCompleted(testId)) {
-      setViewResultTestType(testId);
-      setActiveTab('result');
+      showResult(testId);
     } else {
       startTest(testId);
     }

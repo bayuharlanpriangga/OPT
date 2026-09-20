@@ -16,6 +16,7 @@ export const TestRunnerView: React.FC = () => {
     saveAnswer,
     submitTestAnswers,
     setViewResultTestType,
+    showResult,
     setActiveTab,
     language,
   } = useApp();
@@ -119,9 +120,9 @@ export const TestRunnerView: React.FC = () => {
       }
       setActiveTab('passport');
     } else if (activeTestType) {
-      submitTestAnswers(activeTestType as TestType);
-      setViewResultTestType(activeTestType as TestType);
-      setActiveTab('result');
+      const finishedType = activeTestType as TestType;
+      submitTestAnswers(finishedType);
+      showResult(finishedType);
     }
   };
 
