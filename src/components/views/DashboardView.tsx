@@ -32,7 +32,7 @@ export const DashboardView: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in pb-20 md:pb-12">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-m3-xl bg-gradient-to-br from-primary-container/80 via-surface-container to-surface-container-high p-6 md:p-10 border border-outline-variant shadow-sm">
+      <section className="relative overflow-hidden rounded-m3-xl bg-linear-to-br from-primary-container/80 via-surface-container to-surface-container-high p-6 md:p-10 border border-outline-variant shadow-sm">
         <div className="relative z-10 max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface/80 text-primary text-xs font-semibold uppercase tracking-wider mb-4 border border-outline-variant/60 shadow-xs">
             <span className="material-symbols-outlined text-[16px]">verified</span>
@@ -63,6 +63,15 @@ export const DashboardView: React.FC = () => {
               onClick={() => startTest('grand_assessment')}
             >
               {language === 'id' ? 'Mulai Tes Lengkap (All-in-One)' : 'Start Grand Assessment (All-in-One)'}
+            </M3Button>
+
+            <M3Button
+              variant="outlined"
+              size="lg"
+              icon="diversity_3"
+              onClick={() => setActiveTab('match')}
+            >
+              {language === 'id' ? 'Cek Kecocokan Pasangan' : 'Type Compatibility'}
             </M3Button>
 
             {completedCount > 0 && (
@@ -183,7 +192,7 @@ export const DashboardView: React.FC = () => {
                 variant={completed ? 'elevated' : 'outlined'}
                 interactive
                 onClick={() => handleTestCardClick(test.id)}
-                className="flex flex-col justify-between group hover:border-primary/50 transition-all min-h-[220px]"
+                className="flex flex-col justify-between group hover:border-primary/50 transition-all min-h-55"
               >
                 <div>
                   <div className="flex items-start justify-between mb-3">

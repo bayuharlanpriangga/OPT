@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { M3Card } from '../m3/M3Card';
 import { M3Button } from '../m3/M3Button';
 import { M3ProgressBar } from '../m3/M3ProgressBar';
+import { M3RadarChart } from '../m3/M3RadarChart';
+import { M3AlignmentGrid } from '../m3/M3AlignmentGrid';
 import { TESTS_METADATA } from '../../data/metadata';
 import { JUNGIAN_FUNCTIONS_INFO } from '../../data/descriptions/jungianData';
 import { AP_ASPECT_INFO, AP_ATTITUDES_INFO } from '../../data/descriptions/apData';
@@ -369,6 +371,17 @@ const JungianResultDetail: React.FC = () => {
   const res = allResults.jungian;
   if (!res) return null;
 
+  const jungianRadarData = [
+    { label: 'Ni', value: Math.min(100, (res.scores['Ni'] || 0) * 2) },
+    { label: 'Ne', value: Math.min(100, (res.scores['Ne'] || 0) * 2) },
+    { label: 'Ti', value: Math.min(100, (res.scores['Ti'] || 0) * 2) },
+    { label: 'Te', value: Math.min(100, (res.scores['Te'] || 0) * 2) },
+    { label: 'Fi', value: Math.min(100, (res.scores['Fi'] || 0) * 2) },
+    { label: 'Fe', value: Math.min(100, (res.scores['Fe'] || 0) * 2) },
+    { label: 'Si', value: Math.min(100, (res.scores['Si'] || 0) * 2) },
+    { label: 'Se', value: Math.min(100, (res.scores['Se'] || 0) * 2) },
+  ];
+
   return (
     <div className="space-y-6">
       <M3Card variant="elevated" className="p-6 md:p-8 bg-surface-container">
@@ -406,6 +419,14 @@ const JungianResultDetail: React.FC = () => {
             <div className="text-2xl font-black">{res.inferiorFunction}</div>
             <div className="text-[11px]">Pintu Alam Bawah Sadar</div>
           </div>
+        </div>
+
+        {/* Radar Spider Chart Visualization */}
+        <div className="my-6 p-4 rounded-m3-xl bg-surface-container-low border border-outline-variant/60 flex flex-col items-center">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-outline mb-2">
+            {language === 'id' ? 'Diagram Radar 8 Fungsi Kognitif' : '8 Cognitive Functions Radar Chart'}
+          </h3>
+          <M3RadarChart data={jungianRadarData} size={340} />
         </div>
 
         {/* 8 Functions Spectrum */}
@@ -544,6 +565,14 @@ const Big5ResultDetail: React.FC = () => {
   const res = allResults.big5;
   if (!res) return null;
 
+  const big5RadarData = [
+    { label: 'Openness', value: res.scores.openness },
+    { label: 'Conscientious', value: res.scores.conscientiousness },
+    { label: 'Extraversion', value: res.scores.extraversion },
+    { label: 'Agreeableness', value: res.scores.agreeableness },
+    { label: 'Neuroticism', value: res.scores.neuroticism },
+  ];
+
   return (
     <div className="space-y-6">
       <M3Card variant="elevated" className="p-6 md:p-8 bg-surface-container">
@@ -562,6 +591,14 @@ const Big5ResultDetail: React.FC = () => {
         <p className="text-sm md:text-base text-on-surface-variant leading-relaxed mb-6">
           {res.description[language]}
         </p>
+
+        {/* Big 5 Radar Chart */}
+        <div className="my-6 p-4 rounded-m3-xl bg-surface-container-low border border-outline-variant/60 flex flex-col items-center">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-outline mb-2">
+            {language === 'id' ? 'Diagram Radar Sifat Big Five' : 'Big Five Traits Radar Chart'}
+          </h3>
+          <M3RadarChart data={big5RadarData} size={320} />
+        </div>
 
         {/* 5 Factors */}
         <div className="space-y-4 pt-4 border-t border-outline-variant/60">
@@ -595,9 +632,6 @@ const AlignmentResultDetail: React.FC = () => {
   const res = allResults.alignment;
   if (!res) return null;
 
-  const gridRows = ['Lawful', 'Neutral', 'Chaotic'];
-  const gridCols = ['Good', 'Neutral', 'Evil'];
-
   return (
     <div className="space-y-6">
       <M3Card variant="elevated" className="p-6 md:p-8 bg-surface-container">
@@ -612,39 +646,12 @@ const AlignmentResultDetail: React.FC = () => {
           <p className="text-sm md:text-base text-on-surface-variant mt-2">{res.description[language]}</p>
         </div>
 
-        {/* 3x3 Grid Matrix */}
+        {/* Interactive 3x3 Grid Coordinate Matrix */}
         <div className="pt-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-outline mb-3 text-center">
-            {language === 'id' ? 'Matriks 3x3 Posisi Moral' : '3x3 Alignment Matrix'}
+          <h3 className="text-xs font-bold uppercase tracking-wider text-outline mb-3">
+            {language === 'id' ? 'Matriks Koordinat Posisi Moral' : 'Moral Alignment Coordinate Matrix'}
           </h3>
-
-          <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
-            {gridRows.map((r) =>
-              gridCols.map((c) => {
-                let cellName = `${r} ${c}`;
-                if (r === 'Neutral' && c === 'Neutral') cellName = 'True Neutral';
-                const isUser = cellName === res.alignment;
-
-                return (
-                  <div
-                    key={cellName}
-                    className={`h-20 p-2 rounded-m3-md border text-center flex flex-col items-center justify-center transition-all ${
-                      isUser
-                        ? 'bg-primary text-on-primary ring-4 ring-primary-container shadow-md scale-105 font-black'
-                        : 'bg-surface-container-high border-outline-variant/50 text-on-surface-variant text-xs'
-                    }`}
-                  >
-                    <span className="text-[11px] leading-tight font-bold">{cellName}</span>
-                    {isUser && (
-                      <span className="text-[9px] bg-white text-primary px-1.5 py-0.2 rounded-full mt-1 font-bold">
-                        YOU
-                      </span>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <M3AlignmentGrid result={res} language={language} />
         </div>
       </M3Card>
     </div>

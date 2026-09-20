@@ -52,6 +52,8 @@ export const TestRunnerView: React.FC = () => {
   const answeredCount = questions.filter((q) => userAnswers[q.question.id] !== undefined).length;
   const totalQuestions = questions.length;
   const progressPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
+  const remainingQuestions = Math.max(0, totalQuestions - answeredCount);
+  const estRemainingMinutes = Math.max(1, Math.ceil((remainingQuestions * 12) / 60));
   const isLastQuestion = currentIndex === questions.length - 1;
 
   const handleSelectAnswer = useCallback(
@@ -169,7 +171,7 @@ export const TestRunnerView: React.FC = () => {
 
       {/* Progress Bar & Subsystem Info */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-medium text-on-surface-variant">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-on-surface-variant">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px] text-primary">
               {currentTestMeta?.icon}
@@ -183,9 +185,17 @@ export const TestRunnerView: React.FC = () => {
               </span>
             )}
           </div>
-          <span>
-            {answeredCount} / {totalQuestions} {language === 'id' ? 'terjawab' : 'answered'} ({progressPercent}%)
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary-container/40 px-2 py-0.5 rounded-full">
+              <span className="material-symbols-outlined text-[14px]">timer</span>
+              <span>
+                {language === 'id' ? `~${estRemainingMinutes} mnt tersisa` : `~${estRemainingMinutes} min left`}
+              </span>
+            </span>
+            <span>
+              {answeredCount} / {totalQuestions} {language === 'id' ? 'terjawab' : 'answered'} ({progressPercent}%)
+            </span>
+          </div>
         </div>
         <M3ProgressBar progress={progressPercent} height="h-2" />
       </div>
@@ -246,7 +256,7 @@ export const TestRunnerView: React.FC = () => {
         </div>
 
         {/* Prompt Statement */}
-        <div className="min-h-[110px] flex items-center justify-center my-4 text-center">
+        <div className="min-h-27.5 flex items-center justify-center my-4 text-center">
           <p className="text-lg md:text-2xl font-bold tracking-tight text-on-surface leading-snug max-w-2xl">
             "{currentQuestion.text[language]}"
           </p>

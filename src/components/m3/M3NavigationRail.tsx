@@ -24,6 +24,12 @@ export const M3NavigationRail: React.FC = () => {
       icon: 'local_library',
       activeIcon: 'local_library',
     },
+    {
+      id: 'match',
+      label: { id: 'Relasi', en: 'Match' },
+      icon: 'diversity_3',
+      activeIcon: 'diversity_3',
+    },
   ];
 
   return (

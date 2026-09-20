@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type {
   TestType,
   Language,
   ThemePalette,
   UserAllResults,
+  TestHistoryItem,
 } from '../types';
 import {
   calculateMBTI,
@@ -16,6 +17,8 @@ import {
   calculateAlignment,
 } from '../utils/scoring';
 
+export type AppTab = 'dashboard' | 'test' | 'result' | 'passport' | 'library' | 'match';
+
 interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -24,8 +27,8 @@ interface AppContextType {
   themePalette: ThemePalette;
   setThemePalette: (palette: ThemePalette) => void;
 
-  activeTab: 'dashboard' | 'test' | 'result' | 'passport' | 'library';
-  setActiveTab: (tab: 'dashboard' | 'test' | 'result' | 'passport' | 'library') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
 
   activeTestType: TestType | 'grand_assessment' | null;
   startTest: (testType: TestType | 'grand_assessment') => void;
@@ -42,12 +45,18 @@ interface AppContextType {
 
   isCompleted: (testType: TestType) => boolean;
   completedCount: number;
+
+  history: TestHistoryItem[];
+  restoreHistorySnapshot: (historyItem: TestHistoryItem) => void;
+  deleteHistoryItem: (id: string) => void;
+  importAllData: (jsonData: string) => { success: boolean; message: string };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const ANSWERS_STORAGE_KEY = 'omnipersona_answers_v1';
 const RESULTS_STORAGE_KEY = 'omnipersona_results_v1';
+const HISTORY_STORAGE_KEY = 'omnipersona_history_v1';
 const THEME_MODE_KEY = 'omnipersona_theme_mode';
 const THEME_PALETTE_KEY = 'omnipersona_theme_palette';
 const LANG_STORAGE_KEY = 'omnipersona_lang';
@@ -65,7 +74,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return (localStorage.getItem(THEME_PALETTE_KEY) as ThemePalette) || 'purple';
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'test' | 'result' | 'passport' | 'library'>('dashboard');
+  const [activeTab, setActiveTabState] = useState<AppTab>('dashboard');
   const [activeTestType, setActiveTestType] = useState<TestType | 'grand_assessment' | null>(null);
   const [viewResultTestType, setViewResultTestType] = useState<TestType | null>(null);
 
@@ -86,6 +95,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return {};
     }
   });
+
+  const [history, setHistory] = useState<TestHistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(HISTORY_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const isHashNavigating = useRef(false);
+
+  // Hash-based routing synchronization
+  useEffect(() => {
+    const parseHash = () => {
+      const hash = window.location.hash.replace(/^#\/?/, '');
+      if (!hash) {
+        setActiveTabState('dashboard');
+        return;
+      }
+
+      isHashNavigating.current = true;
+      const parts = hash.split('/');
+      const section = parts[0];
+      const param = parts[1] as TestType | 'grand_assessment' | undefined;
+
+      if (section === 'test' && param) {
+        setActiveTabState('test');
+        setActiveTestType(param);
+      } else if (section === 'result' && param) {
+        setActiveTabState('result');
+        setViewResultTestType(param as TestType);
+      } else if (['dashboard', 'passport', 'library', 'match'].includes(section)) {
+        setActiveTabState(section as AppTab);
+      } else {
+        setActiveTabState('dashboard');
+      }
+
+      setTimeout(() => {
+        isHashNavigating.current = false;
+      }, 50);
+    };
+
+    parseHash();
+    window.addEventListener('hashchange', parseHash);
+    return () => window.removeEventListener('hashchange', parseHash);
+  }, []);
+
+  const updateHash = useCallback((tab: AppTab, testParam?: string | null) => {
+    if (isHashNavigating.current) return;
+    let targetHash = `#${tab}`;
+    if (tab === 'test' && testParam) {
+      targetHash = `#test/${testParam}`;
+    } else if (tab === 'result' && testParam) {
+      targetHash = `#result/${testParam}`;
+    }
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
+    }
+  }, []);
+
+  const setActiveTab = useCallback((tab: AppTab) => {
+    setActiveTabState(tab);
+    if (tab === 'test') {
+      updateHash(tab, activeTestType);
+    } else if (tab === 'result') {
+      updateHash(tab, viewResultTestType);
+    } else {
+      updateHash(tab);
+    }
+  }, [activeTestType, viewResultTestType, updateHash]);
+
+  const startTest = useCallback((testType: TestType | 'grand_assessment') => {
+    setActiveTestType(testType);
+    setActiveTabState('test');
+    updateHash('test', testType);
+  }, [updateHash]);
+
+  const setViewResult = useCallback((testType: TestType | null) => {
+    setViewResultTestType(testType);
+    if (testType) {
+      setActiveTabState('result');
+      updateHash('result', testType);
+    }
+  }, [updateHash]);
 
   // Apply theme class to document element
   useEffect(() => {
@@ -126,9 +220,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const startTest = (testType: TestType | 'grand_assessment') => {
-    setActiveTestType(testType);
-    setActiveTab('test');
+  const recordHistory = (updatedResults: UserAllResults, type: TestType | 'grand_assessment') => {
+    let summaryText = 'Hasil Tes';
+    if (type === 'mbti' && updatedResults.mbti) {
+      summaryText = `MBTI: ${updatedResults.mbti.type}`;
+    } else if (type === 'enneagram' && updatedResults.enneagram) {
+      summaryText = `Enneagram: ${updatedResults.enneagram.notation}`;
+    } else if (type === 'grand_assessment') {
+      summaryText = `Dossier Lengkap (${updatedResults.mbti?.type || ''} • ${updatedResults.enneagram?.notation || ''})`;
+    } else {
+      summaryText = `Modul: ${type}`;
+    }
+
+    const newEntry: TestHistoryItem = {
+      id: `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
+      testType: type,
+      summary: summaryText,
+      snapshot: JSON.parse(JSON.stringify(updatedResults)),
+    };
+
+    setHistory((prev) => {
+      const updated = [newEntry, ...prev.filter((item) => item.summary !== summaryText || Date.now() - new Date(item.timestamp).getTime() > 10000)].slice(0, 30);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const submitTestAnswers = (testType: TestType) => {
@@ -136,7 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const now = new Date().toISOString();
 
     setAllResults((prev) => {
-      let updated: UserAllResults = { ...prev };
+      const updated: UserAllResults = { ...prev };
       const completedAt = { ...(prev.completedAt || {}), [testType]: now };
 
       if (testType === 'mbti') {
@@ -159,6 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       updated.completedAt = completedAt;
       localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(updated));
+      recordHistory(updated, testType);
       return updated;
     });
   };
@@ -166,11 +283,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearAllData = () => {
     localStorage.removeItem(ANSWERS_STORAGE_KEY);
     localStorage.removeItem(RESULTS_STORAGE_KEY);
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
     setUserAnswers({});
     setAllResults({});
+    setHistory([]);
     setActiveTab('dashboard');
     setActiveTestType(null);
     setViewResultTestType(null);
+  };
+
+  const restoreHistorySnapshot = (historyItem: TestHistoryItem) => {
+    setAllResults(historyItem.snapshot);
+    localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(historyItem.snapshot));
+    setActiveTab('passport');
+  };
+
+  const deleteHistoryItem = (id: string) => {
+    setHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const importAllData = (jsonData: string): { success: boolean; message: string } => {
+    try {
+      const parsed = JSON.parse(jsonData);
+      if (!parsed || typeof parsed !== 'object') {
+        return { success: false, message: 'Format file JSON tidak valid.' };
+      }
+
+      let targetResults: UserAllResults = {};
+      let targetAnswers: Record<string, number> = {};
+
+      if (parsed.results || parsed.allResults) {
+        targetResults = parsed.results || parsed.allResults;
+        targetAnswers = parsed.answers || parsed.userAnswers || {};
+      } else {
+        targetResults = parsed;
+      }
+
+      setAllResults(targetResults);
+      localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(targetResults));
+
+      if (Object.keys(targetAnswers).length > 0) {
+        setUserAnswers(targetAnswers);
+        localStorage.setItem(ANSWERS_STORAGE_KEY, JSON.stringify(targetAnswers));
+      }
+
+      const newEntry: TestHistoryItem = {
+        id: `${Date.now()}_import`,
+        timestamp: new Date().toISOString(),
+        testType: 'grand_assessment',
+        summary: language === 'id' ? 'Impor Berkas JSON' : 'Imported JSON File',
+        snapshot: targetResults,
+      };
+
+      setHistory((prev) => {
+        const updated = [newEntry, ...prev].slice(0, 30);
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+
+      return {
+        success: true,
+        message: language === 'id' ? 'Data berhasil dipulihkan dari berkas JSON!' : 'Data successfully imported from JSON file!',
+      };
+    } catch (err: any) {
+      return { success: false, message: `Gagal membaca JSON: ${err?.message || 'Error'}` };
+    }
   };
 
   const isCompleted = (testType: TestType): boolean => {
@@ -194,7 +375,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeTestType,
         startTest,
         viewResultTestType,
-        setViewResultTestType,
+        setViewResultTestType: setViewResult,
         userAnswers,
         saveAnswer,
         allResults,
@@ -202,6 +383,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearAllData,
         isCompleted,
         completedCount,
+        history,
+        restoreHistorySnapshot,
+        deleteHistoryItem,
+        importAllData,
       }}
     >
       {children}

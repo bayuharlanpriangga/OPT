@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { generateSynergyAnalysis } from '../../data/descriptions/synergyData';
 import { TESTS_METADATA } from '../../data/metadata';
 import { M3Button } from '../m3/M3Button';
+import { M3ConfirmDialog } from '../m3/M3ConfirmDialog';
+import { downloadSocialCard } from '../../utils/socialCard';
+import type { TestHistoryItem } from '../../types';
 
 export const ComprehensivePassportView: React.FC = () => {
   const {
@@ -12,9 +15,19 @@ export const ComprehensivePassportView: React.FC = () => {
     startTest,
     setViewResultTestType,
     setActiveTab,
+    history,
+    restoreHistorySnapshot,
+    deleteHistoryItem,
+    importAllData,
+    clearAllData,
   } = useApp();
 
   const [copied, setCopied] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const synergy = generateSynergyAnalysis(allResults);
 
   const handleCopySummary = () => {
@@ -46,12 +59,84 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
     downloadAnchor.remove();
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        const res = importAllData(content);
+        setImportStatus(res);
+        setTimeout(() => setImportStatus(null), 4000);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleDownloadCard = () => {
+    const title = synergy?.compositeTitle[language] || 'OmniPersona Dossier';
+    const archetype = synergy?.primaryArchetype[language] || 'Unified Typology Synthesis';
+
+    const cardItems = [
+      { label: 'MBTI', value: allResults.mbti?.type || 'N/A' },
+      { label: 'Enneagram', value: allResults.enneagram?.notation ? `${allResults.enneagram.notation} (${allResults.enneagram.tritype})` : 'N/A' },
+      { label: 'Instinct (IV)', value: allResults.instinct?.stacking || 'N/A' },
+      { label: 'Jungian', value: allResults.jungian?.dominantFunction ? `Dom ${allResults.jungian.dominantFunction} / Aux ${allResults.jungian.auxiliaryFunction}` : 'N/A' },
+      { label: 'Socionics', value: allResults.socionics?.code ? `${allResults.socionics.code} (${allResults.socionics.quadra})` : 'N/A' },
+      { label: 'Attitudinal Psyche', value: allResults.attitudinal_psyche?.type || 'N/A' },
+      { label: 'Big 5 / SLOAN', value: allResults.big5?.sloanCode || 'N/A' },
+      { label: 'Moral Alignment', value: allResults.alignment?.alignment || 'N/A' },
+    ];
+
+    downloadSocialCard(title, archetype, cardItems, language);
+  };
+
   const handlePrint = () => {
     window.print();
   };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-24 md:pb-12">
+      {/* Hidden File Input for Import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".json"
+        className="hidden"
+      />
+
+      {/* Import Toast Alert */}
+      {importStatus && (
+        <div
+          className={`p-4 rounded-m3-lg border flex items-center justify-between animate-fade-in ${
+            importStatus.success
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-800 dark:text-emerald-200'
+              : 'bg-error-container text-on-error-container border-error'
+          }`}
+        >
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <span className="material-symbols-outlined text-[20px]">
+              {importStatus.success ? 'check_circle' : 'error'}
+            </span>
+            <span>{importStatus.message}</span>
+          </div>
+          <button
+            onClick={() => setImportStatus(null)}
+            className="text-xs font-bold underline cursor-pointer"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       {/* Top Banner / Incomplete Notice */}
       {completedCount < 8 && (
         <div className="rounded-m3-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -76,7 +161,7 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
       )}
 
       {/* Grand Personality Passport Card */}
-      <div className="rounded-m3-xl bg-gradient-to-b from-surface-container-highest via-surface-container to-surface-container-low border-2 border-primary/40 p-6 md:p-10 shadow-lg relative overflow-hidden">
+      <div className="rounded-m3-xl bg-linear-to-b from-surface-container-highest via-surface-container to-surface-container-low border-2 border-primary/40 p-6 md:p-10 shadow-lg relative overflow-hidden">
         {/* Passport Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-outline-variant/80 pb-6 mb-8">
           <div>
@@ -94,6 +179,16 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
 
           <div className="flex flex-wrap items-center gap-2">
             <M3Button
+              variant="filled"
+              size="sm"
+              icon="image"
+              onClick={handleDownloadCard}
+              title="Unduh Kartu Gambar PNG untuk Media Sosial"
+            >
+              {language === 'id' ? 'Kartu PNG' : 'Share Card'}
+            </M3Button>
+
+            <M3Button
               variant="tonal"
               size="sm"
               icon={copied ? 'check' : 'content_copy'}
@@ -105,8 +200,19 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
             <M3Button
               variant="outlined"
               size="sm"
+              icon="file_upload"
+              onClick={handleImportClick}
+              title="Pulihkan data hasil tes dari berkas JSON"
+            >
+              {language === 'id' ? 'Impor JSON' : 'Import'}
+            </M3Button>
+
+            <M3Button
+              variant="outlined"
+              size="sm"
               icon="download"
               onClick={handleExportJSON}
+              title="Cadangkan data ke berkas JSON"
             >
               JSON
             </M3Button>
@@ -229,7 +335,7 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
               <div className="p-4 rounded-m3-lg bg-surface-container border border-outline-variant/60">
                 <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs uppercase mb-2">
                   <span className="material-symbols-outlined text-[18px]">crisis_alert</span>
-                  <span>{language === 'id' ? 'Tantangan Bayangan' : 'Growth & Shadow'}</span>
+                  <span>{language === 'id' ? 'Tantangan Bayangan & Shadow' : 'Growth & Shadow'}</span>
                 </div>
                 <ul className="space-y-1.5">
                   {synergy.growthChallenges.map((g, idx) => (
@@ -241,9 +347,149 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
                 </ul>
               </div>
             </div>
+
+            {/* Actionable Recommendations for Growth */}
+            <div className="p-5 rounded-m3-xl bg-primary-container/20 border border-primary/30 space-y-4">
+              <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase">
+                <span className="material-symbols-outlined text-[20px]">lightbulb</span>
+                <span>{language === 'id' ? 'Rekomendasi Pengembangan Diri Holistik' : 'Actionable Growth Blueprint'}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-on-surface-variant">
+                <div className="space-y-1">
+                  <h5 className="font-bold text-on-surface flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">chat</span>
+                    <span>{language === 'id' ? 'Gaya Komunikasi' : 'Communication'}</span>
+                  </h5>
+                  <p className="leading-relaxed">
+                    {language === 'id'
+                      ? 'Ungkapkan konteks dan tujuan dasar terlebih dahulu sebelum menyampaikan kritik atau analisis teknis.'
+                      : 'Anchor your underlying vision and intent clearly before offering sharp analytical critique.'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <h5 className="font-bold text-on-surface flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">self_improvement</span>
+                    <span>{language === 'id' ? 'Regulasi Stres' : 'Stress Management'}</span>
+                  </h5>
+                  <p className="leading-relaxed">
+                    {language === 'id'
+                      ? 'Sediakan waktu hening berkala untuk dekompresi mental tanpa paparan stimulasi eksternal yang padat.'
+                      : 'Carve out deliberate periods of solitude to prevent sensory and cognitive overload.'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <h5 className="font-bold text-on-surface flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">work</span>
+                    <span>{language === 'id' ? 'Kolaborasi Tim' : 'Team Collaboration'}</span>
+                  </h5>
+                  <p className="leading-relaxed">
+                    {language === 'id'
+                      ? 'Padukan kekuatan analitis Anda dengan rekan tipe ekstrovert/eksekutor untuk merealisasikan ide ke lapangan.'
+                      : 'Pair your strategic mind with active executors to manifest vision into real-world momentum.'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
+
+      {/* History & Timeline Section */}
+      <div className="rounded-m3-xl bg-surface-container border border-outline-variant p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[22px]">history</span>
+            <h3 className="font-bold text-base text-on-surface">
+              {language === 'id' ? 'Riwayat Pengambilan Tes & Snapshot' : 'Test History & Snapshots'}
+            </h3>
+            <span className="text-xs bg-primary-container text-on-primary-container px-2 py-0.5 rounded-full font-bold">
+              {history.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <M3Button
+              variant="tonal"
+              size="sm"
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              {showHistory
+                ? (language === 'id' ? 'Sembunyikan' : 'Hide')
+                : (language === 'id' ? 'Tampilkan' : 'View History')}
+            </M3Button>
+
+            <M3Button
+              variant="text"
+              size="sm"
+              className="text-error!"
+              onClick={() => setResetDialogOpen(true)}
+            >
+              {language === 'id' ? 'Hapus Semua' : 'Reset All'}
+            </M3Button>
+          </div>
+        </div>
+
+        {showHistory && (
+          <div className="space-y-2 pt-2 animate-fade-in max-h-72 overflow-y-auto">
+            {history.length === 0 ? (
+              <p className="text-xs text-on-surface-variant italic py-2">
+                {language === 'id' ? 'Belum ada riwayat tes tersimpan.' : 'No test snapshots recorded yet.'}
+              </p>
+            ) : (
+              history.map((item: TestHistoryItem) => (
+                <div
+                  key={item.id}
+                  className="p-3 rounded-m3-md bg-surface-container-high border border-outline-variant/60 flex items-center justify-between text-xs"
+                >
+                  <div className="space-y-0.5">
+                    <div className="font-bold text-on-surface">{item.summary}</div>
+                    <div className="text-[11px] text-outline">
+                      {new Date(item.timestamp).toLocaleString(language === 'id' ? 'id-ID' : 'en-US', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => restoreHistorySnapshot(item)}
+                      className="text-primary hover:underline font-semibold cursor-pointer"
+                    >
+                      {language === 'id' ? 'Pulihkan' : 'Restore'}
+                    </button>
+                    <button
+                      onClick={() => deleteHistoryItem(item.id)}
+                      className="text-error hover:underline cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation Dialog for Data Reset */}
+      <M3ConfirmDialog
+        isOpen={resetDialogOpen}
+        title={language === 'id' ? 'Hapus Seluruh Data?' : 'Reset All Profile Data?'}
+        message={
+          language === 'id'
+            ? 'Tindakan ini akan menghapus seluruh jawaban, hasil tes, dan riwayat yang tersimpan di peramban ini. Pastikan Anda sudah mengunduh berkas JSON jika ingin menyimpannya.'
+            : 'This will permanently wipe all answers, test scores, and historical snapshots stored in this browser. Ensure you exported your JSON if you wish to keep them.'
+        }
+        confirmText={language === 'id' ? 'Hapus Permanen' : 'Delete Permanently'}
+        cancelText={language === 'id' ? 'Batal' : 'Cancel'}
+        isDestructive={true}
+        onConfirm={() => {
+          clearAllData();
+          setResetDialogOpen(false);
+        }}
+        onCancel={() => setResetDialogOpen(false)}
+      />
     </div>
   );
 };

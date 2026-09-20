@@ -160,3 +160,11 @@ export interface UserAllResults {
   alignment?: AlignmentResult;
   completedAt?: Record<string, string>;
 }
+
+export interface TestHistoryItem {
+  id: string;
+  timestamp: string;
+  testType: TestType | 'grand_assessment';
+  summary: string;
+  snapshot: UserAllResults;
+}
