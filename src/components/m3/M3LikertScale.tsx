@@ -65,8 +65,8 @@ export const M3LikertScale: React.FC<M3LikertScaleProps> = ({
   return (
     <div className="w-full py-4 select-none">
       {/* Labels for ends */}
-      <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider mb-4 px-2">
-        <span className="text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+      <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider mb-4 px-2">
+        <span className="text-black dark:text-white flex items-center gap-1.5">
           <span className="material-symbols-outlined text-[16px]">close</span>
           {language === 'id' ? 'Tidak Setuju' : 'Disagree'}
         </span>
@@ -108,7 +108,15 @@ export const M3LikertScale: React.FC<M3LikertScaleProps> = ({
       {/* Text feedback indicator */}
       <div className="h-6 mt-4 text-center">
         {value ? (
-          <span className="inline-block text-xs md:text-sm font-semibold text-on-surface bg-surface-container-high px-3 py-1 rounded-full shadow-xs animate-fade-in">
+          <span
+            className={`inline-block text-xs md:text-sm font-bold px-3 py-1 rounded-full shadow-xs animate-fade-in ${
+              value <= 2
+                ? 'text-black dark:text-white bg-neutral-200 dark:bg-neutral-800'
+                : value === 3
+                ? 'text-on-surface bg-surface-container-high border border-outline-variant'
+                : 'text-primary bg-primary-container'
+            }`}
+          >
             {options.find((o) => o.val === value)?.label[language]}
           </span>
         ) : (
