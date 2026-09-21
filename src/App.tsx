@@ -40,7 +40,7 @@ const MainLayout: React.FC = () => {
                 : 'These typology frameworks (MBTI, Enneagram, Socionics, AP, Big 5, Alignment) are intended solely for self-reflection, cognitive exploration, and personal growth. They do not constitute formal psychiatric, clinical, or medical psychological diagnoses.'}
             </p>
             <div className="text-[11px] text-outline pt-2">
-              OPT &copy; 2026 &bull; Material 3 Design &bull; Open Psychometrics Toolkit
+              Orias Personality Test (OPT) &copy; 2026
             </div>
           </footer>
         </main>

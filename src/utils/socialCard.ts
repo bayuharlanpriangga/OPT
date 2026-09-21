@@ -113,7 +113,7 @@ export function downloadSocialCard(
 
   // Trigger download
   const link = document.createElement('a');
-  link.download = `omnipersona_card_${Date.now()}.png`;
+  link.download = `orias_personality_test_card_${Date.now()}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
 }

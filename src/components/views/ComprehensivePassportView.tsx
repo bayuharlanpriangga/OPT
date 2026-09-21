@@ -32,7 +32,7 @@ export const ComprehensivePassportView: React.FC = () => {
 
   const handleCopySummary = () => {
     const summaryText = `
-=== OMNIPERSONA PERSONALITY DOSSIER ===
+=== ORIAS PERSONALITY TEST DOSSIER ===
 MBTI: ${allResults.mbti?.type || 'N/A'} - ${allResults.mbti?.title[language] || ''}
 Enneagram: ${allResults.enneagram?.notation || 'N/A'} (Tritype: ${allResults.enneagram?.tritype || 'N/A'})
 Instinctual Variant: ${allResults.instinct?.stacking || 'N/A'}
@@ -41,7 +41,7 @@ Socionics: ${allResults.socionics?.code || 'N/A'} (${allResults.socionics?.quadr
 Attitudinal Psyche: ${allResults.attitudinal_psyche?.type || 'N/A'}
 Big Five / SLOAN: ${allResults.big5?.sloanCode || 'N/A'}
 Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
-=======================================
+======================================
     `.trim();
 
     navigator.clipboard.writeText(summaryText);
@@ -53,7 +53,7 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(allResults, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `omnipersona_dossier_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `orias_personality_test_dossier_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -81,7 +81,7 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
   };
 
   const handleDownloadCard = () => {
-    const title = synergy?.compositeTitle[language] || 'OmniPersona Dossier';
+    const title = synergy?.compositeTitle[language] || 'Orias Personality Test Dossier';
     const archetype = synergy?.primaryArchetype[language] || 'Unified Typology Synthesis';
 
     const cardItems = [
@@ -100,6 +100,28 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleShareLink = () => {
+    const params = new URLSearchParams();
+    if (allResults.mbti) params.set('m', allResults.mbti.type);
+    if (allResults.enneagram) params.set('e', allResults.enneagram.notation);
+    if (allResults.instinct) params.set('iv', allResults.instinct.stacking);
+    if (allResults.socionics) params.set('s', allResults.socionics.code);
+    if (allResults.attitudinal_psyche) params.set('ap', allResults.attitudinal_psyche.type);
+    if (allResults.big5) params.set('b5', allResults.big5.sloanCode);
+    if (allResults.alignment) params.set('al', allResults.alignment.alignment.replace(' ', '_'));
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}#passport?${params.toString()}`;
+    if (navigator.share) {
+      navigator.share({
+        title: synergy?.compositeTitle[language] || 'Orias Personality Test Dossier',
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      alert(language === 'id' ? 'Tautan profil tersalin ke clipboard!' : 'Profile link copied to clipboard!');
+    }
   };
 
   return (
@@ -186,6 +208,16 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
               title="Unduh Kartu Gambar PNG untuk Media Sosial"
             >
               {language === 'id' ? 'Kartu PNG' : 'Share Card'}
+            </M3Button>
+
+            <M3Button
+              variant="tonal"
+              size="sm"
+              icon="share"
+              onClick={handleShareLink}
+              title="Salin Tautan Ringkasan Hasil Profil"
+            >
+              {language === 'id' ? 'Tautan' : 'Link'}
             </M3Button>
 
             <M3Button
@@ -348,6 +380,38 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
               </div>
             </div>
 
+            {/* Cross-System Nuances & Paradox Detection */}
+            {synergy.paradoxes && synergy.paradoxes.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[18px]">hub</span>
+                  <span>{language === 'id' ? 'Dinamika Unik & Nuansa Paradoks Lintas Sistem' : 'Cross-System Nuances & Paradox Dynamics'}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {synergy.paradoxes.map((p, idx) => (
+                    <div key={idx} className="p-4 rounded-m3-lg bg-surface-container border border-primary/20 space-y-2 shadow-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="font-bold text-sm text-on-surface flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-primary inline-block"></span>
+                          {p.title[language]}
+                        </h4>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary-container">
+                          {p.type}
+                        </span>
+                      </div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        {p.description[language]}
+                      </p>
+                      <div className="text-[11px] pt-1 text-primary font-medium flex items-start gap-1.5">
+                        <span className="material-symbols-outlined text-[15px] shrink-0 mt-0.5">tips_and_updates</span>
+                        <span>{p.insight[language]}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Actionable Recommendations for Growth */}
             <div className="p-5 rounded-m3-xl bg-primary-container/20 border border-primary/30 space-y-4">
               <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase">
@@ -392,6 +456,31 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
             </div>
           </div>
         )}
+      </div>
+
+      {/* Local-First & Privacy Guarantee Badge */}
+      <div className="p-5 rounded-m3-xl bg-surface-container border border-outline-variant/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[22px]">verified_user</span>
+          </div>
+          <div>
+            <div className="font-bold text-sm text-on-surface">
+              {language === 'id' ? '100% Klien Lokal & Privasi Terjamin' : '100% Client-Side & Local Privacy'}
+            </div>
+            <p className="text-[11px] text-on-surface-variant leading-relaxed">
+              {language === 'id'
+                ? 'Semua jawaban dan hasil tes Anda diproses serta disimpan eksklusif di peramban ini (Local Storage). Tidak ada data pribadi yang dikirim ke server.'
+                : 'All your answers and test outputs are computed and stored exclusively in this browser (Local Storage). No personal data is transmitted to external servers.'}
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+            <span className="material-symbols-outlined text-[15px]">lock</span>
+            <span>Zero Tracking</span>
+          </span>
+        </div>
       </div>
 
       {/* History & Timeline Section */}

@@ -376,6 +376,63 @@ export const ReferenceLibraryView: React.FC = () => {
           )
         )}
       </div>
+
+      {/* Academic Bibliography & Scientific Methodology Section */}
+      <section className="pt-8 border-t border-outline-variant/80 space-y-4">
+        <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider">
+          <span className="material-symbols-outlined text-[20px]">menu_book</span>
+          <span>{language === 'id' ? 'Landasan Teori & Bibliografi Akademis' : 'Theoretical Foundations & Academic Bibliography'}</span>
+        </div>
+        <p className="text-xs text-on-surface-variant leading-relaxed">
+          {language === 'id'
+            ? 'Setiap instrumen dalam OPT dipetakan berdasarkan literatur psikologi kepribadian klasik dan modern. Model empiris (Big Five) dan kerangka heuristik kognitif (Jungian/MBTI/Socionics) diposisikan secara transparan sesuai derajat validitas psikometrinya.'
+            : 'Each instrument in OPT is grounded in classical and contemporary personality literature. Empirical models (Big Five) and cognitive heuristics (Jungian/MBTI/Socionics) are transparently categorized according to their psychometric validity.'}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div className="p-3.5 rounded-m3-md bg-surface-container border border-outline-variant/60 space-y-1">
+            <span className="font-bold text-primary">1. Big Five (OCEAN / FFM) — Konsensus Empiris Utama</span>
+            <p className="text-on-surface-variant text-[11px] leading-relaxed">
+              Costa, P. T., & McCrae, R. R. (1992). <em>Revised NEO Personality Inventory (NEO PI-R) and NEO Five-Factor Inventory (NEO-FFI) Professional Manual</em>. Psychological Assessment Resources.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-m3-md bg-surface-container border border-outline-variant/60 space-y-1">
+            <span className="font-bold text-primary">2. Tipologi Kognitif Carl G. Jung</span>
+            <p className="text-on-surface-variant text-[11px] leading-relaxed">
+              Jung, C. G. (1921). <em>Psychologische Typen</em> (Psychological Types, Collected Works Vol. 6). Princeton University Press.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-m3-md bg-surface-container border border-outline-variant/60 space-y-1">
+            <span className="font-bold text-primary">3. Myers-Briggs Type Indicator (MBTI)</span>
+            <p className="text-on-surface-variant text-[11px] leading-relaxed">
+              Myers, I. B., & Myers, P. B. (1980). <em>Gifts Differing: Understanding Personality Type</em>. Davies-Black Publishing.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-m3-md bg-surface-container border border-outline-variant/60 space-y-1">
+            <span className="font-bold text-primary">4. Enneagram & Tritype Dynamics</span>
+            <p className="text-on-surface-variant text-[11px] leading-relaxed">
+              Riso, D. R., & Hudson, R. (1999). <em>The Wisdom of the Enneagram</em>. Bantam Books; Fauvre, K. (2010). <em>Tritype Archetypes</em>.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-m3-md bg-surface-container border border-outline-variant/60 space-y-1">
+            <span className="font-bold text-primary">5. Socionics (Metabolisme Informasi Kognitif)</span>
+            <p className="text-on-surface-variant text-[11px] leading-relaxed">
+              Augusta, A. (1980). <em>The Dual Nature of Humanity</em>. International Institute of Socionics, Vilnius/Kyiv.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-m3-md bg-surface-container border border-outline-variant/60 space-y-1">
+            <span className="font-bold text-primary">6. Attitudinal Psyche & Psychosophy</span>
+            <p className="text-on-surface-variant text-[11px] leading-relaxed">
+              Afanasyev, A. (1993). <em>The Syntax of Love: Typology of Personalities and Prognosis of Relations</em>. Black Squirrel Books.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

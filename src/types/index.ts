@@ -25,6 +25,14 @@ export interface Question {
   category?: string;
 }
 
+export interface MBTIClarityItem {
+  dimension: 'EI' | 'SN' | 'TF' | 'JP';
+  leadPole: string;
+  diff: number;
+  level: 'strong' | 'moderate' | 'slight';
+  label: LocalizedString;
+}
+
 export interface MBTIResult {
   type: string; // e.g. 'INTJ'
   percentages: {
@@ -36,6 +44,12 @@ export interface MBTIResult {
     F: number;
     J: number;
     P: number;
+  };
+  clarity?: {
+    EI: MBTIClarityItem;
+    SN: MBTIClarityItem;
+    TF: MBTIClarityItem;
+    JP: MBTIClarityItem;
   };
   title: LocalizedString;
   description: LocalizedString;
@@ -76,6 +90,14 @@ export interface JungianResult {
   scores: Record<string, number>; // Ne, Ni, Se, Si, Te, Ti, Fe, Fi
   title: LocalizedString;
   description: LocalizedString;
+  stackAnalysis?: {
+    axisBalance: LocalizedString;
+    shadowElevated?: {
+      func: string;
+      score: number;
+      label: LocalizedString;
+    };
+  };
 }
 
 export interface SocionicsResult {

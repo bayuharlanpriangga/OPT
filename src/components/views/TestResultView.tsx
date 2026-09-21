@@ -9,6 +9,7 @@ import { TESTS_METADATA } from '../../data/metadata';
 import { JUNGIAN_FUNCTIONS_INFO } from '../../data/descriptions/jungianData';
 import { AP_ASPECT_INFO, AP_ATTITUDES_INFO } from '../../data/descriptions/apData';
 import { BIG5_DIMENSIONS } from '../../data/descriptions/big5Data';
+import { evaluateResponseReliability } from '../../utils/scoring';
 import type { TestType } from '../../types';
 
 export const TestResultView: React.FC = () => {
@@ -17,9 +18,11 @@ export const TestResultView: React.FC = () => {
     startTest,
     setActiveTab,
     language,
+    userAnswers,
   } = useApp();
 
   const testMeta = TESTS_METADATA.find((m) => m.id === viewResultTestType);
+  const reliability = evaluateResponseReliability(userAnswers);
 
   if (!viewResultTestType || !testMeta) {
     return (
@@ -102,6 +105,31 @@ export const TestResultView: React.FC = () => {
         </div>
       </div>
 
+      {/* Response Reliability Indicator */}
+      {reliability && (
+        <div className={`p-4 rounded-m3-lg border flex items-start gap-3 shadow-xs ${
+          reliability.status === 'high'
+            ? 'bg-surface-container border-outline-variant/60'
+            : reliability.status === 'moderate'
+            ? 'bg-amber-500/10 border-amber-500/30'
+            : 'bg-error-container/30 border-error/40'
+        }`}>
+          <span className={`material-symbols-outlined text-[20px] shrink-0 mt-0.5 ${
+            reliability.status === 'high' ? 'text-primary' : reliability.status === 'moderate' ? 'text-amber-600 dark:text-amber-400' : 'text-error'
+          }`}>
+            {reliability.status === 'high' ? 'verified' : 'info'}
+          </span>
+          <div className="text-xs space-y-0.5">
+            <span className="font-bold text-on-surface mr-2">
+              {reliability.label[language]}
+            </span>
+            <p className="text-on-surface-variant leading-relaxed inline sm:block">
+              {reliability.note[language]}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Render Specific Test Result */}
       {viewResultTestType === 'mbti' && <MBTIResultDetail />}
       {viewResultTestType === 'enneagram' && <EnneagramResultDetail />}
@@ -159,11 +187,22 @@ const MBTIResultDetail: React.FC = () => {
 
           {/* E vs I */}
           <div className="space-y-1">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className={res.percentages.E >= 50 ? 'text-primary' : 'text-outline'}>
+            <div className="flex justify-between items-center text-xs font-semibold">
+              <span className={res.percentages.E >= 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Extraversion ({res.percentages.E}%)
               </span>
-              <span className={res.percentages.I > 50 ? 'text-primary' : 'text-outline'}>
+              {res.clarity?.EI && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  res.clarity.EI.level === 'strong'
+                    ? 'bg-primary-container text-on-primary-container'
+                    : res.clarity.EI.level === 'moderate'
+                    ? 'bg-surface-container-highest text-on-surface-variant'
+                    : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300'
+                }`}>
+                  {res.clarity.EI.label[language]}
+                </span>
+              )}
+              <span className={res.percentages.I > 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Introversion ({res.percentages.I}%)
               </span>
             </div>
@@ -172,11 +211,22 @@ const MBTIResultDetail: React.FC = () => {
 
           {/* S vs N */}
           <div className="space-y-1">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className={res.percentages.S >= 50 ? 'text-primary' : 'text-outline'}>
+            <div className="flex justify-between items-center text-xs font-semibold">
+              <span className={res.percentages.S >= 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Sensing ({res.percentages.S}%)
               </span>
-              <span className={res.percentages.N > 50 ? 'text-primary' : 'text-outline'}>
+              {res.clarity?.SN && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  res.clarity.SN.level === 'strong'
+                    ? 'bg-primary-container text-on-primary-container'
+                    : res.clarity.SN.level === 'moderate'
+                    ? 'bg-surface-container-highest text-on-surface-variant'
+                    : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300'
+                }`}>
+                  {res.clarity.SN.label[language]}
+                </span>
+              )}
+              <span className={res.percentages.N > 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Intuition ({res.percentages.N}%)
               </span>
             </div>
@@ -185,11 +235,22 @@ const MBTIResultDetail: React.FC = () => {
 
           {/* T vs F */}
           <div className="space-y-1">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className={res.percentages.T >= 50 ? 'text-primary' : 'text-outline'}>
+            <div className="flex justify-between items-center text-xs font-semibold">
+              <span className={res.percentages.T >= 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Thinking ({res.percentages.T}%)
               </span>
-              <span className={res.percentages.F > 50 ? 'text-primary' : 'text-outline'}>
+              {res.clarity?.TF && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  res.clarity.TF.level === 'strong'
+                    ? 'bg-primary-container text-on-primary-container'
+                    : res.clarity.TF.level === 'moderate'
+                    ? 'bg-surface-container-highest text-on-surface-variant'
+                    : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300'
+                }`}>
+                  {res.clarity.TF.label[language]}
+                </span>
+              )}
+              <span className={res.percentages.F > 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Feeling ({res.percentages.F}%)
               </span>
             </div>
@@ -198,11 +259,22 @@ const MBTIResultDetail: React.FC = () => {
 
           {/* J vs P */}
           <div className="space-y-1">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className={res.percentages.J >= 50 ? 'text-primary' : 'text-outline'}>
+            <div className="flex justify-between items-center text-xs font-semibold">
+              <span className={res.percentages.J >= 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Judging ({res.percentages.J}%)
               </span>
-              <span className={res.percentages.P > 50 ? 'text-primary' : 'text-outline'}>
+              {res.clarity?.JP && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  res.clarity.JP.level === 'strong'
+                    ? 'bg-primary-container text-on-primary-container'
+                    : res.clarity.JP.level === 'moderate'
+                    ? 'bg-surface-container-highest text-on-surface-variant'
+                    : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300'
+                }`}>
+                  {res.clarity.JP.label[language]}
+                </span>
+              )}
+              <span className={res.percentages.P > 50 ? 'text-primary font-bold' : 'text-outline'}>
                 Perceiving ({res.percentages.P}%)
               </span>
             </div>
@@ -458,6 +530,25 @@ const JungianResultDetail: React.FC = () => {
             <div className="text-[11px]">Pintu Alam Bawah Sadar</div>
           </div>
         </div>
+
+        {/* Cognitive Axis Alignment & Shadow Analysis */}
+        {res.stackAnalysis && (
+          <div className="mb-6 p-4 rounded-m3-lg bg-surface-container-high border border-outline-variant/70 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase text-primary">
+              <span className="material-symbols-outlined text-[18px]">balance</span>
+              <span>{language === 'id' ? 'Keseimbangan Sumbu Kognitif Jungian' : 'Cognitive Axis Alignment'}</span>
+            </div>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              {res.stackAnalysis.axisBalance[language]}
+            </p>
+            {res.stackAnalysis.shadowElevated && (
+              <div className="mt-2 text-xs p-2.5 rounded-m3-sm bg-primary-container/40 text-on-primary-container border border-primary/20 flex items-start gap-2">
+                <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">bolt</span>
+                <span>{res.stackAnalysis.shadowElevated.label[language]}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Radar Spider Chart Visualization */}
         <div className="my-6 p-4 rounded-m3-xl bg-surface-container-low border border-outline-variant/60 flex flex-col items-center">

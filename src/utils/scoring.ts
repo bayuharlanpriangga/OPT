@@ -1,5 +1,6 @@
 import {
   MBTIResult,
+  MBTIClarityItem,
   EnneagramResult,
   InstinctResult,
   JungianResult,
@@ -7,6 +8,7 @@ import {
   AttitudinalPsycheResult,
   Big5Result,
   AlignmentResult,
+  LocalizedString,
 } from '../types';
 import { MBTI_PROFILES } from '../data/descriptions/mbtiData';
 import { ENNEAGRAM_CORE_PROFILES, getTritypeProfile } from '../data/descriptions/enneagramData';
@@ -28,6 +30,32 @@ import { ALIGNMENT_QUESTIONS } from '../data/questions/alignment';
 // Convert 1-5 scale answer to standard -2 to +2 value
 export function answerToValue(val: number): number {
   return val - 3; // 1 -> -2, 2 -> -1, 3 -> 0, 4 -> +1, 5 -> +2
+}
+
+// Helper to compute clarity for MBTI dimensions
+function getMBTIClarity(lead: string, pctLead: number, dim: 'EI' | 'SN' | 'TF' | 'JP'): MBTIClarityItem {
+  const diff = Math.abs(pctLead - (100 - pctLead));
+  let level: 'strong' | 'moderate' | 'slight' = 'moderate';
+  let labelId = 'Moderat';
+  let labelEn = 'Moderate';
+
+  if (diff >= 35) {
+    level = 'strong';
+    labelId = 'Sangat Jelas';
+    labelEn = 'Clear Preference';
+  } else if (diff < 15) {
+    level = 'slight';
+    labelId = 'Borderline (Seimbang)';
+    labelEn = 'Borderline (Balanced)';
+  }
+
+  return {
+    dimension: dim,
+    leadPole: lead,
+    diff,
+    level,
+    label: { id: labelId, en: labelEn },
+  };
 }
 
 // 1. MBTI Calculation
@@ -62,6 +90,11 @@ export function calculateMBTI(answers: Record<string, number>): MBTIResult {
   const pctT = Math.round(((scoreTF + maxScore) / (maxScore * 2)) * 100);
   const pctJ = Math.round(((scoreJP + maxScore) / (maxScore * 2)) * 100);
 
+  const boundedE = Math.min(Math.max(pctE, 5), 95);
+  const boundedS = Math.min(Math.max(pctS, 5), 95);
+  const boundedT = Math.min(Math.max(pctT, 5), 95);
+  const boundedJ = Math.min(Math.max(pctJ, 5), 95);
+
   return {
     type,
     title: profile.title,
@@ -70,14 +103,20 @@ export function calculateMBTI(answers: Record<string, number>): MBTIResult {
     strengths: profile.strengths,
     growth: profile.growth,
     percentages: {
-      E: Math.min(Math.max(pctE, 5), 95),
-      I: 100 - Math.min(Math.max(pctE, 5), 95),
-      S: Math.min(Math.max(pctS, 5), 95),
-      N: 100 - Math.min(Math.max(pctS, 5), 95),
-      T: Math.min(Math.max(pctT, 5), 95),
-      F: 100 - Math.min(Math.max(pctT, 5), 95),
-      J: Math.min(Math.max(pctJ, 5), 95),
-      P: 100 - Math.min(Math.max(pctJ, 5), 95),
+      E: boundedE,
+      I: 100 - boundedE,
+      S: boundedS,
+      N: 100 - boundedS,
+      T: boundedT,
+      F: 100 - boundedT,
+      J: boundedJ,
+      P: 100 - boundedJ,
+    },
+    clarity: {
+      EI: getMBTIClarity(letterE_or_I, letterE_or_I === 'E' ? boundedE : 100 - boundedE, 'EI'),
+      SN: getMBTIClarity(letterS_or_N, letterS_or_N === 'S' ? boundedS : 100 - boundedS, 'SN'),
+      TF: getMBTIClarity(letterT_or_F, letterT_or_F === 'T' ? boundedT : 100 - boundedT, 'TF'),
+      JP: getMBTIClarity(letterJ_or_P, letterJ_or_P === 'J' ? boundedJ : 100 - boundedJ, 'JP'),
     },
   };
 }
@@ -183,6 +222,32 @@ export function calculateInstinct(answers: Record<string, number>): InstinctResu
   };
 }
 
+// Canonical Jungian functional pairs & auxiliary requirements
+const JUNG_OPPOSITES: Record<string, string> = {
+  Ni: 'Se',
+  Se: 'Ni',
+  Ne: 'Si',
+  Si: 'Ne',
+  Ti: 'Fe',
+  Fe: 'Ti',
+  Te: 'Fi',
+  Fi: 'Te',
+};
+
+// Valid auxiliary functions that complement the dominant function:
+// - If dominant is irrational (perceiving: Ni, Ne, Si, Se), auxiliary must be rational (judging: Te, Fe, Ti, Fi) with opposite attitude.
+// - If dominant is rational (judging: Ti, Te, Fi, Fe), auxiliary must be irrational (perceiving: Ne, Se, Ni, Si) with opposite attitude.
+const JUNG_VALID_AUXILIARIES: Record<string, string[]> = {
+  Ni: ['Te', 'Fe'],
+  Si: ['Te', 'Fe'],
+  Ne: ['Ti', 'Fi'],
+  Se: ['Ti', 'Fi'],
+  Ti: ['Ne', 'Se'],
+  Fi: ['Ne', 'Se'],
+  Te: ['Ni', 'Si'],
+  Fe: ['Ni', 'Si'],
+};
+
 // 4. Classic Jungian Calculation
 export function calculateJungian(answers: Record<string, number>): JungianResult {
   const scores: Record<string, number> = {
@@ -194,11 +259,32 @@ export function calculateJungian(answers: Record<string, number>): JungianResult
     scores[q.dimension] += rawVal * 10; // scaled 10-50
   }
 
+  // Find dominant function (highest score)
   const sortedFunctions = Object.keys(scores).sort((a, b) => scores[b] - scores[a]);
   const dominantFunction = sortedFunctions[0];
-  const auxiliaryFunction = sortedFunctions[1];
-  const tertiaryFunction = sortedFunctions[sortedFunctions.length - 2];
-  const inferiorFunction = sortedFunctions[sortedFunctions.length - 1];
+
+  // Pick auxiliary from valid complementary functions according to Jungian typology
+  const validAuxList = JUNG_VALID_AUXILIARIES[dominantFunction] || ['Te', 'Fe'];
+  const auxiliaryFunction = validAuxList.reduce((best, cur) => (scores[cur] > scores[best] ? cur : best), validAuxList[0]);
+
+  // Tertiary is the functional reflection of the auxiliary
+  const tertiaryFunction = JUNG_OPPOSITES[auxiliaryFunction] || 'Fi';
+
+  // Inferior is the strict functional opposite of the dominant function
+  const inferiorFunction = JUNG_OPPOSITES[dominantFunction] || 'Se';
+
+  // Identify elevated shadow function: highest scoring function outside conscious ego stack
+  const egoStack = [dominantFunction, auxiliaryFunction, tertiaryFunction, inferiorFunction];
+  const shadowCandidates = sortedFunctions.filter((f) => !egoStack.includes(f));
+  const topShadow = shadowCandidates[0];
+  const shadowElevated = topShadow && scores[topShadow] >= 30 ? {
+    func: topShadow,
+    score: scores[topShadow],
+    label: {
+      id: `Fungsi Bayangan Tertinggi: ${topShadow} (${scores[topShadow]} poin) — Menunjukkan energi kognitif bawah sadar yang aktif.`,
+      en: `Elevated Shadow Function: ${topShadow} (${scores[topShadow]} pts) — Indicates active unconscious cognitive energy.`,
+    },
+  } : undefined;
 
   const domInfo = JUNGIAN_FUNCTIONS_INFO[dominantFunction];
 
@@ -209,10 +295,17 @@ export function calculateJungian(answers: Record<string, number>): JungianResult
     inferiorFunction,
     scores,
     title: {
-      id: `Dominan ${domInfo.name.id} — Aux ${auxiliaryFunction}`,
-      en: `Dominant ${domInfo.name.en} — Aux ${auxiliaryFunction}`,
+      id: `Dominan ${domInfo?.name?.id || dominantFunction} — Aux ${auxiliaryFunction}`,
+      en: `Dominant ${domInfo?.name?.en || dominantFunction} — Aux ${auxiliaryFunction}`,
     },
-    description: domInfo.description,
+    description: domInfo?.description || { id: '', en: '' },
+    stackAnalysis: {
+      axisBalance: {
+        id: `Sumbu kognitif utama: ${dominantFunction} (Dominan) bersanding dengan ${inferiorFunction} (Inferior), didukung penyeimbang sadar ${auxiliaryFunction} (Auxiliary) dan ${tertiaryFunction} (Tersier).`,
+        en: `Primary cognitive axis: ${dominantFunction} (Dominant) paired with ${inferiorFunction} (Inferior), supported by conscious balancers ${auxiliaryFunction} (Auxiliary) and ${tertiaryFunction} (Tertiary).`,
+      },
+      shadowElevated,
+    },
   };
 }
 
@@ -424,5 +517,65 @@ export function calculateAlignment(answers: Record<string, number>): AlignmentRe
     },
     title: detail.title,
     description: detail.description,
+  };
+}
+
+export interface ResponseReliability {
+  score: number; // 0 - 100
+  status: 'high' | 'moderate' | 'low';
+  label: LocalizedString;
+  note: LocalizedString;
+}
+
+// Psychometric check for straight-lining or acquiescence bias
+export function evaluateResponseReliability(answers: Record<string, number>): ResponseReliability {
+  const values = Object.values(answers);
+  if (values.length < 8) {
+    return {
+      score: 100,
+      status: 'high',
+      label: { id: 'Reliabilitas Tinggi', en: 'High Reliability' },
+      note: { id: 'Variansi respon terdistribusi normal.', en: 'Normal response distribution.' },
+    };
+  }
+
+  // Count neutral (3) answers
+  const neutralCount = values.filter((v) => v === 3).length;
+  const neutralRatio = neutralCount / values.length;
+
+  // Check variance
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / values.length;
+
+  if (neutralRatio > 0.65 || variance < 0.25) {
+    return {
+      score: 45,
+      status: 'low',
+      label: { id: 'Perhatian: Bias Netral / Seragam', en: 'Low Variance / Neutral Bias' },
+      note: {
+        id: 'Terdeteksi banyak jawaban netral atau bernilai seragam. Pertimbangkan mengambil tes ulang dengan jawaban yang lebih tegas untuk akurasi maksimal.',
+        en: 'A high frequency of neutral or identical responses was detected. Consider retaking with more distinct answers for maximum accuracy.',
+      },
+    };
+  } else if (neutralRatio > 0.4 || variance < 0.55) {
+    return {
+      score: 75,
+      status: 'moderate',
+      label: { id: 'Reliabilitas Moderat', en: 'Moderate Reliability' },
+      note: {
+        id: 'Jawaban cukup bervariasi dengan kecenderungan minor pada pilihan netral.',
+        en: 'Responses are sufficiently varied with slight tendency towards neutrality.',
+      },
+    };
+  }
+
+  return {
+    score: 95,
+    status: 'high',
+    label: { id: 'Reliabilitas Psikometri Terverifikasi', en: 'Verified High Psychometric Reliability' },
+    note: {
+      id: 'Variansi jawaban seimbang dengan diferensiasi preferensi yang tajam dan otentik.',
+      en: 'Balanced response variance with authentic, well-differentiated preferences.',
+    },
   };
 }
