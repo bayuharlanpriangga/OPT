@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { M3Card } from '../m3/M3Card';
 import { M3Chip } from '../m3/M3Chip';
+import { M3Button } from '../m3/M3Button';
+import { TypeDetailPage } from './TypeDetailPage';
 import { MBTI_PROFILES } from '../../data/descriptions/mbtiData';
-import { ENNEAGRAM_CORE_PROFILES } from '../../data/descriptions/enneagramData';
+import { ENNEAGRAM_CORE_PROFILES, TRITYPE_ARCHETYPES } from '../../data/descriptions/enneagramData';
 import { INSTINCT_PROFILES } from '../../data/descriptions/instinctData';
 import { JUNGIAN_FUNCTIONS_INFO } from '../../data/descriptions/jungianData';
 import { SOCIOTYPES, QUADRA_DETAILS } from '../../data/descriptions/socionicsData';
 import { AP_TYPE_ARCHETYPES, AP_ASPECT_INFO } from '../../data/descriptions/apData';
-import { BIG5_DIMENSIONS } from '../../data/descriptions/big5Data';
+import { BIG5_DIMENSIONS, SLOAN_ARCHETYPES } from '../../data/descriptions/big5Data';
 import { ALIGNMENT_DETAILS } from '../../data/descriptions/alignmentData';
 import type { TestType } from '../../types';
 
@@ -16,6 +18,53 @@ export const ReferenceLibraryView: React.FC = () => {
   const { language } = useApp();
   const [activeCategory, setActiveCategory] = useState<TestType>('mbti');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [enneagramSubView, setEnneagramSubView] = useState<'core' | 'tritype'>('core');
+  const [big5SubView, setBig5SubView] = useState<'sloan32' | 'dimensions'>('sloan32');
+
+  const [selectedDetail, setSelectedDetail] = useState<{ category: TestType; typeId: string } | null>(() => {
+    const hash = window.location.hash.replace(/^#\/?/, '');
+    const parts = hash.split('/');
+    if (parts[0] === 'library' && parts[1] && parts[2]) {
+      return { category: parts[1] as TestType, typeId: parts[2] };
+    }
+    return null;
+  });
+
+  // Handle hash changes for browser back/forward buttons
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace(/^#\/?/, '');
+      const parts = hash.split('/');
+      if (parts[0] === 'library' && parts[1] && parts[2]) {
+        setSelectedDetail({ category: parts[1] as TestType, typeId: parts[2] });
+      } else if (parts[0] === 'library' && parts.length === 1) {
+        setSelectedDetail(null);
+      }
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const handleOpenDetail = (category: TestType, typeId: string) => {
+    setSelectedDetail({ category, typeId });
+    window.location.hash = `#library/${category}/${typeId}`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedDetail(null);
+    window.location.hash = '#library';
+  };
+
+  if (selectedDetail) {
+    return (
+      <TypeDetailPage
+        category={selectedDetail.category}
+        typeId={selectedDetail.typeId}
+        onBack={handleCloseDetail}
+      />
+    );
+  }
 
   const categories: { id: TestType; label: string }[] = [
     { id: 'mbti', label: 'MBTI (16)' },
@@ -23,8 +72,8 @@ export const ReferenceLibraryView: React.FC = () => {
     { id: 'instinct', label: 'Instinct (IV)' },
     { id: 'jungian', label: 'Jungian Functions' },
     { id: 'socionics', label: 'Socionics & Quadra' },
-    { id: 'attitudinal_psyche', label: 'Attitudinal Psyche' },
-    { id: 'big5', label: 'Big 5 / SLOAN' },
+    { id: 'attitudinal_psyche', label: 'Attitudinal Psyche (24)' },
+    { id: 'big5', label: 'Big 5 / SLOAN (32)' },
     { id: 'alignment', label: 'Alignment (3x3)' },
   ];
 
@@ -47,6 +96,14 @@ export const ReferenceLibraryView: React.FC = () => {
       p.type.toString().includes(q) ||
       p.title[language].toLowerCase().includes(q) ||
       p.description[language].toLowerCase().includes(q)
+  );
+
+  const filteredTritypes = Object.entries(TRITYPE_ARCHETYPES).filter(
+    ([code, item]) =>
+      !q ||
+      code.includes(q) ||
+      item.title[language].toLowerCase().includes(q) ||
+      item.description[language].toLowerCase().includes(q)
   );
 
   const filteredInstinct = Object.values(INSTINCT_PROFILES).filter(
@@ -84,7 +141,15 @@ export const ReferenceLibraryView: React.FC = () => {
       arch.description[language].toLowerCase().includes(q)
   );
 
-  const filteredBig5 = Object.values(BIG5_DIMENSIONS).filter(
+  const filteredSloan32 = Object.entries(SLOAN_ARCHETYPES).filter(
+    ([code, prof]) =>
+      !q ||
+      code.toLowerCase().includes(q) ||
+      prof.title[language].toLowerCase().includes(q) ||
+      prof.description[language].toLowerCase().includes(q)
+  );
+
+  const filteredBig5Dim = Object.values(BIG5_DIMENSIONS).filter(
     (dim) =>
       !q ||
       dim.name[language].toLowerCase().includes(q) ||
@@ -109,8 +174,8 @@ export const ReferenceLibraryView: React.FC = () => {
           </h1>
           <p className="text-xs md:text-sm text-on-surface-variant mt-1">
             {language === 'id'
-              ? 'Pelajari teori mendalam, deskripsi tipe, fungsi kognitif, dan hubungan antar sistem.'
-              : 'Explore in-depth theories, type descriptions, cognitive functions, and cross-system models.'}
+              ? 'Pilih tipe apa pun untuk membuka halaman pembahasan aspek mendalam, dinamika relasi, dan strategi pertumbuhan.'
+              : 'Select any personality archetype to open in-depth aspect discussions, relational dynamics, and growth paths.'}
           </p>
         </div>
 
@@ -129,7 +194,7 @@ export const ReferenceLibraryView: React.FC = () => {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">cancel</span>
             </button>
@@ -144,7 +209,9 @@ export const ReferenceLibraryView: React.FC = () => {
             key={c.id}
             label={c.label}
             selected={activeCategory === c.id}
-            onClick={() => setActiveCategory(c.id)}
+            onClick={() => {
+              setActiveCategory(c.id);
+            }}
           />
         ))}
       </div>
@@ -158,23 +225,33 @@ export const ReferenceLibraryView: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredMBTI.map((p) => (
-                <M3Card key={p.type} variant="outlined" className="p-5 bg-surface-container">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xl font-black text-primary">{p.type}</span>
-                    <div className="flex gap-1">
-                      {p.cognitiveStack.map((fn) => (
-                        <span key={fn} className="text-[10px] bg-primary-container text-on-primary-container px-1.5 py-0.5 rounded">
-                          {fn}
-                        </span>
-                      ))}
+                <M3Card
+                  key={p.type}
+                  variant="outlined"
+                  className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                  onClick={() => handleOpenDetail('mbti', p.type)}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xl font-black text-primary group-hover:underline">{p.type}</span>
+                      <div className="flex gap-1">
+                        {p.cognitiveStack.map((fn) => (
+                          <span key={fn} className="text-[10px] font-bold bg-primary-container text-on-primary-container px-1.5 py-0.5 rounded">
+                            {fn}
+                          </span>
+                        ))}
+                      </div>
                     </div>
+                    <h3 className="font-bold text-sm text-on-surface mb-1">{p.title[language]}</h3>
+                    <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                      {p.description[language]}
+                    </p>
                   </div>
-                  <h3 className="font-bold text-sm text-on-surface mb-1">{p.title[language]}</h3>
-                  <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
-                    {p.description[language]}
-                  </p>
-                  <div className="text-[11px] text-outline italic">
-                    {p.nickname[language]}
+                  <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
+                    <span className="text-outline italic">{p.nickname[language]}</span>
+                    <span className="text-primary font-bold inline-flex items-center gap-0.5">
+                      {language === 'id' ? 'Buka Detail' : 'Full Detail'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                    </span>
                   </div>
                 </M3Card>
               ))}
@@ -184,27 +261,95 @@ export const ReferenceLibraryView: React.FC = () => {
 
         {/* Enneagram Section */}
         {activeCategory === 'enneagram' && (
-          filteredEnneagram.length === 0 ? (
-            <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {filteredEnneagram.map((p) => (
-                <M3Card key={p.type} variant="outlined" className="p-5 bg-surface-container">
-                  <div className="text-2xl font-black text-primary mb-1">Tipe {p.type}</div>
-                  <h3 className="font-bold text-sm text-on-surface mb-1">{p.title[language]}</h3>
-                  <span className="text-[10px] font-bold text-outline uppercase bg-surface-container-high px-2 py-0.5 rounded">
-                    {p.centerLabel[language]}
-                  </span>
-                  <p className="text-xs text-on-surface-variant mt-2 leading-relaxed">
-                    {p.description[language]}
-                  </p>
-                  <div className="mt-3 pt-2 border-t border-outline-variant/60 text-[11px] text-error font-medium">
-                    Fobia: {p.coreFear[language]}
-                  </div>
-                </M3Card>
-              ))}
+          <div className="space-y-4">
+            {/* Sub-view toggle */}
+            <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
+              <button
+                onClick={() => setEnneagramSubView('core')}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                  enneagramSubView === 'core'
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                {language === 'id' ? '9 Tipe Pokok (Core Types)' : '9 Core Types'}
+              </button>
+              <button
+                onClick={() => setEnneagramSubView('tritype')}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                  enneagramSubView === 'tritype'
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                {language === 'id' ? '27 Arketipe Tritype' : '27 Tritype Archetypes'}
+              </button>
             </div>
-          )
+
+            {enneagramSubView === 'core' && (
+              filteredEnneagram.length === 0 ? (
+                <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {filteredEnneagram.map((p) => (
+                    <M3Card
+                      key={p.type}
+                      variant="outlined"
+                      className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                      onClick={() => handleOpenDetail('enneagram', p.type.toString())}
+                    >
+                      <div>
+                        <div className="text-2xl font-black text-primary mb-1 group-hover:underline">Tipe {p.type}</div>
+                        <h3 className="font-bold text-sm text-on-surface mb-1">{p.title[language]}</h3>
+                        <span className="text-[10px] font-bold text-outline uppercase bg-surface-container-high px-2 py-0.5 rounded">
+                          {p.centerLabel[language]}
+                        </span>
+                        <p className="text-xs text-on-surface-variant mt-2 leading-relaxed">
+                          {p.description[language]}
+                        </p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
+                        <span className="text-error font-medium truncate mr-1">Fobia: {p.coreFear[language]}</span>
+                        <span className="text-primary font-bold shrink-0 inline-flex items-center">
+                          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </span>
+                      </div>
+                    </M3Card>
+                  ))}
+                </div>
+              )
+            )}
+
+            {enneagramSubView === 'tritype' && (
+              filteredTritypes.length === 0 ? (
+                <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {filteredTritypes.map(([code, item]) => (
+                    <M3Card
+                      key={code}
+                      variant="outlined"
+                      className="p-4 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                      onClick={() => handleOpenDetail('enneagram', code)}
+                    >
+                      <div>
+                        <span className="text-base font-black text-primary group-hover:underline">Tritype {code}</span>
+                        <h4 className="text-xs font-bold text-on-surface mt-0.5 mb-1">{item.title[language]}</h4>
+                        <p className="text-[11px] text-on-surface-variant leading-relaxed mb-2">
+                          {item.description[language]}
+                        </p>
+                      </div>
+                      <div className="pt-1 border-t border-outline-variant/60 text-right">
+                        <span className="text-[10px] text-primary font-bold inline-flex items-center">
+                          Detail <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+                        </span>
+                      </div>
+                    </M3Card>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
         )}
 
         {/* Instinct Section */}
@@ -214,15 +359,25 @@ export const ReferenceLibraryView: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredInstinct.map((p) => (
-                <M3Card key={p.stacking} variant="outlined" className="p-5 bg-surface-container">
-                  <span className="text-xl font-black text-primary">{p.stacking}</span>
-                  <h3 className="font-bold text-sm text-on-surface mt-1 mb-2">{p.title[language]}</h3>
-                  <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
-                    {p.description[language]}
-                  </p>
-                  <div className="text-xs bg-surface-container-high p-2.5 rounded-m3-sm">
-                    <span className="font-bold text-primary">Tantangan: </span>
-                    <span className="text-on-surface-variant">{p.growthEdge[language]}</span>
+                <M3Card
+                  key={p.stacking}
+                  variant="outlined"
+                  className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                  onClick={() => handleOpenDetail('instinct', p.stacking)}
+                >
+                  <div>
+                    <span className="text-xl font-black text-primary group-hover:underline">{p.stacking}</span>
+                    <h3 className="font-bold text-sm text-on-surface mt-1 mb-2">{p.title[language]}</h3>
+                    <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                      {p.description[language]}
+                    </p>
+                  </div>
+                  <div className="text-xs bg-surface-container-high p-2.5 rounded-m3-sm flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-primary">Tantangan: </span>
+                      <span className="text-on-surface-variant">{p.growthEdge[language]}</span>
+                    </div>
+                    <span className="material-symbols-outlined text-[16px] text-primary ml-2 shrink-0">arrow_forward</span>
                   </div>
                 </M3Card>
               ))}
@@ -237,23 +392,35 @@ export const ReferenceLibraryView: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredJungian.map((f) => (
-                <M3Card key={f.code} variant="outlined" className="p-5 bg-surface-container">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-2xl font-black text-primary">{f.code}</span>
-                    <span className="text-[10px] uppercase font-bold bg-primary-container px-2 py-0.5 rounded text-on-primary-container">
-                      {f.attitude} {f.type}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-sm text-on-surface mb-2">{f.name[language]}</h3>
-                  <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
-                    {f.description[language]}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {f.keywords.map((k, idx) => (
-                      <span key={idx} className="text-[10px] bg-surface-container-high px-2 py-0.5 rounded text-outline font-medium">
-                        #{k[language]}
+                <M3Card
+                  key={f.code}
+                  variant="outlined"
+                  className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                  onClick={() => handleOpenDetail('jungian', f.code)}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl font-black text-primary group-hover:underline">{f.code}</span>
+                      <span className="text-[10px] uppercase font-bold bg-primary-container px-2 py-0.5 rounded text-on-primary-container">
+                        {f.attitude} {f.type}
                       </span>
-                    ))}
+                    </div>
+                    <h3 className="font-bold text-sm text-on-surface mb-2">{f.name[language]}</h3>
+                    <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                      {f.description[language]}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-outline-variant/60">
+                    <div className="flex flex-wrap gap-1">
+                      {f.keywords.map((k, idx) => (
+                        <span key={idx} className="text-[10px] bg-surface-container-high px-2 py-0.5 rounded text-outline font-medium">
+                          #{k[language]}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-xs font-bold text-primary inline-flex items-center">
+                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </span>
                   </div>
                 </M3Card>
               ))}
@@ -281,16 +448,29 @@ export const ReferenceLibraryView: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 {filteredSociotypes.map((s) => (
-                  <M3Card key={s.code} variant="outlined" className="p-4 bg-surface-container">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-base font-black text-primary">{s.code}</span>
-                      <span className="text-xs text-outline font-bold">{s.mbtiEquivalent}</span>
+                  <M3Card
+                    key={s.code}
+                    variant="outlined"
+                    className="p-4 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                    onClick={() => handleOpenDetail('socionics', s.code)}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-base font-black text-primary group-hover:underline">{s.code}</span>
+                        <span className="text-xs text-outline font-bold">{s.mbtiEquivalent}</span>
+                      </div>
+                      <div className="text-xs font-bold text-on-surface mb-1">{s.name[language]}</div>
+                      <div className="text-[10px] text-outline font-semibold mb-2">Quadra {s.quadra}</div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        {s.description[language]}
+                      </p>
                     </div>
-                    <div className="text-xs font-bold text-on-surface mb-1">{s.name[language]}</div>
-                    <div className="text-[10px] text-outline font-semibold mb-2">Quadra {s.quadra}</div>
-                    <p className="text-xs text-on-surface-variant leading-relaxed">
-                      {s.description[language]}
-                    </p>
+                    <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px] mt-2">
+                      <span className="text-outline">{s.leadFunction}</span>
+                      <span className="text-primary font-bold inline-flex items-center">
+                        <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                      </span>
+                    </div>
                   </M3Card>
                 ))}
               </div>
@@ -298,9 +478,10 @@ export const ReferenceLibraryView: React.FC = () => {
           </div>
         )}
 
-        {/* Attitudinal Psyche Section */}
+        {/* Attitudinal Psyche Section - NOW UNIFIED IN M3CARD STYLE */}
         {activeCategory === 'attitudinal_psyche' && (
           <div className="space-y-6">
+            {/* 4 Aspects Primer */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               {Object.keys(AP_ASPECT_INFO).map((k) => {
                 const asp = AP_ASPECT_INFO[k];
@@ -317,39 +498,140 @@ export const ReferenceLibraryView: React.FC = () => {
             {filteredAP.length === 0 ? (
               <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredAP.map(([type, arch]) => (
-                  <div key={type} className="p-3 rounded-m3-md bg-surface-container-high border border-outline-variant/60">
-                    <div className="text-sm font-black text-primary">{type}</div>
-                    <div className="text-xs font-bold text-on-surface mb-1">{arch.title[language]}</div>
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed">{arch.description[language]}</p>
-                  </div>
+                  <M3Card
+                    key={type}
+                    variant="outlined"
+                    className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                    onClick={() => handleOpenDetail('attitudinal_psyche', type)}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xl font-black text-primary group-hover:underline">{type}</span>
+                        <div className="flex gap-1">
+                          {type.split('').map((char, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] font-bold bg-primary-container text-on-primary-container px-1.5 py-0.5 rounded"
+                              title={`${i + 1}: ${AP_ASPECT_INFO[char]?.title[language] || char}`}
+                            >
+                              {i + 1}{char}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-sm text-on-surface mb-1">{arch.title[language]}</h3>
+                      <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                        {arch.description[language]}
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
+                      <span className="text-outline">
+                        1: {AP_ASPECT_INFO[type[0]]?.title[language].split(' ')[0]} • 3: {AP_ASPECT_INFO[type[2]]?.title[language].split(' ')[0]}
+                      </span>
+                      <span className="text-primary font-bold inline-flex items-center gap-0.5">
+                        {language === 'id' ? 'Buka Aspek' : 'Full Aspects'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                      </span>
+                    </div>
+                  </M3Card>
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {/* Big 5 / SLOAN Section */}
+        {/* Big 5 / SLOAN Section - NOW MAPPED FULLY TO 32 SLOAN TYPES + 5 DIMENSIONS */}
         {activeCategory === 'big5' && (
-          filteredBig5.length === 0 ? (
-            <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
-          ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {filteredBig5.map((dim) => (
-                  <div key={dim.code} className="p-4 rounded-m3-lg bg-surface-container border border-outline-variant">
-                    <h4 className="font-bold text-sm text-primary mb-1">{dim.name[language]}</h4>
-                    <p className="text-xs text-on-surface-variant mb-2">{dim.description[language]}</p>
-                    <div className="text-[11px] space-y-1">
-                      <div><span className="font-bold text-on-surface">{dim.highPole.letter}:</span> {dim.highPole.trait[language]}</div>
-                      <div><span className="font-bold text-on-surface">{dim.lowPole.letter}:</span> {dim.lowPole.trait[language]}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="space-y-4">
+            {/* Sub-view toggle */}
+            <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
+              <button
+                onClick={() => setBig5SubView('sloan32')}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                  big5SubView === 'sloan32'
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                {language === 'id' ? '32 Tipe Kombinasi SLOAN' : '32 SLOAN Composite Types'}
+              </button>
+              <button
+                onClick={() => setBig5SubView('dimensions')}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                  big5SubView === 'dimensions'
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                {language === 'id' ? '5 Dimensi Spektrum OCEAN / FFM' : '5 OCEAN Dimensions'}
+              </button>
             </div>
-          )
+
+            {big5SubView === 'sloan32' && (
+              filteredSloan32.length === 0 ? (
+                <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredSloan32.map(([code, prof]) => (
+                    <M3Card
+                      key={code}
+                      variant="outlined"
+                      className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                      onClick={() => handleOpenDetail('big5', code)}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xl font-black text-primary group-hover:underline">{code}</span>
+                          <div className="flex gap-1">
+                            {code.split('').map((char, i) => (
+                              <span
+                                key={i}
+                                className="text-[10px] font-bold bg-primary-container text-on-primary-container px-1.5 py-0.5 rounded"
+                              >
+                                {char}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <h3 className="font-bold text-sm text-on-surface mb-1">{prof.title[language]}</h3>
+                        <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                          {prof.description[language]}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
+                        <span className="text-outline truncate max-w-[220px]">
+                          {prof.traits[0] ? prof.traits[0][language] : ''}
+                        </span>
+                        <span className="text-primary font-bold inline-flex items-center gap-0.5 shrink-0">
+                          {language === 'id' ? 'Buka Profil' : 'View Profile'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </span>
+                      </div>
+                    </M3Card>
+                  ))}
+                </div>
+              )
+            )}
+
+            {big5SubView === 'dimensions' && (
+              filteredBig5Dim.length === 0 ? (
+                <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {filteredBig5Dim.map((dim) => (
+                    <div key={dim.code} className="p-4 rounded-m3-lg bg-surface-container border border-outline-variant">
+                      <h4 className="font-bold text-sm text-primary mb-1">{dim.name[language]}</h4>
+                      <p className="text-xs text-on-surface-variant mb-2 leading-relaxed">{dim.description[language]}</p>
+                      <div className="text-[11px] space-y-1 pt-2 border-t border-outline-variant/60">
+                        <div><span className="font-bold text-on-surface">{dim.highPole.letter}:</span> {dim.highPole.trait[language]}</div>
+                        <div><span className="font-bold text-on-surface">{dim.lowPole.letter}:</span> {dim.lowPole.trait[language]}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
         )}
 
         {/* Alignment Section */}
@@ -359,16 +641,28 @@ export const ReferenceLibraryView: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {filteredAlignment.map((al) => (
-                <M3Card key={al.alignment} variant="outlined" className="p-5 bg-surface-container">
-                  <span className="text-lg font-black text-primary">{al.alignment}</span>
-                  <h3 className="font-bold text-sm text-on-surface mt-1 mb-1">{al.title[language]}</h3>
-                  <p className="text-xs italic text-outline mb-2">"{al.motto[language]}"</p>
-                  <p className="text-xs text-on-surface-variant leading-relaxed mb-2">
-                    {al.description[language]}
-                  </p>
-                  <div className="text-[11px] text-outline">
-                    <span className="font-bold">Arketipe: </span>
-                    <span>{al.archetypes[0][language]}</span>
+                <M3Card
+                  key={al.alignment}
+                  variant="outlined"
+                  className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                  onClick={() => handleOpenDetail('alignment', al.alignment)}
+                >
+                  <div>
+                    <span className="text-lg font-black text-primary group-hover:underline">{al.alignment}</span>
+                    <h3 className="font-bold text-sm text-on-surface mt-1 mb-1">{al.title[language]}</h3>
+                    <p className="text-xs italic text-outline mb-2">"{al.motto[language]}"</p>
+                    <p className="text-xs text-on-surface-variant leading-relaxed mb-2">
+                      {al.description[language]}
+                    </p>
+                  </div>
+                  <div className="text-[11px] text-outline pt-2 border-t border-outline-variant/60 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold">Arketipe: </span>
+                      <span>{al.archetypes[0][language]}</span>
+                    </div>
+                    <span className="text-primary font-bold inline-flex items-center">
+                      <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                    </span>
                   </div>
                 </M3Card>
               ))}
@@ -456,3 +750,4 @@ const NoResultsReset: React.FC<{ onReset: () => void; language: string }> = ({ o
     </button>
   </div>
 );
+
