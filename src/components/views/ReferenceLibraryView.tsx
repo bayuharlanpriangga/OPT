@@ -18,6 +18,7 @@ export const ReferenceLibraryView: React.FC = () => {
   const { language } = useApp();
   const [activeCategory, setActiveCategory] = useState<TestType>('mbti');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [mbtiTemperament, setMbtiTemperament] = useState<'all' | 'analysts' | 'diplomats' | 'sentinels' | 'explorers'>('all');
   const [enneagramSubView, setEnneagramSubView] = useState<'core' | 'tritype'>('core');
   const [big5SubView, setBig5SubView] = useState<'sloan32' | 'dimensions'>('sloan32');
 
@@ -79,15 +80,25 @@ export const ReferenceLibraryView: React.FC = () => {
 
   const q = searchQuery.toLowerCase().trim();
 
+  const getTemperament = (type: string) => {
+    if (type.includes('NT')) return 'analysts';
+    if (type.includes('NF')) return 'diplomats';
+    if (type.includes('S') && type.includes('J')) return 'sentinels';
+    return 'explorers';
+  };
+
   // Filtered lists
-  const filteredMBTI = Object.values(MBTI_PROFILES).filter(
-    (p) =>
+  const filteredMBTI = Object.values(MBTI_PROFILES).filter((p) => {
+    const matchSearch =
       !q ||
       p.type.toLowerCase().includes(q) ||
       p.title[language].toLowerCase().includes(q) ||
       p.description[language].toLowerCase().includes(q) ||
-      p.cognitiveStack.some((fn) => fn.toLowerCase().includes(q))
-  );
+      p.cognitiveStack.some((fn) => fn.toLowerCase().includes(q));
+
+    const matchTemp = mbtiTemperament === 'all' || getTemperament(p.type) === mbtiTemperament;
+    return matchSearch && matchTemp;
+  });
 
   const filteredEnneagram = Object.values(ENNEAGRAM_CORE_PROFILES).filter(
     (p) =>
@@ -220,43 +231,68 @@ export const ReferenceLibraryView: React.FC = () => {
       <div className="space-y-4">
         {/* MBTI Section */}
         {activeCategory === 'mbti' && (
-          filteredMBTI.length === 0 ? (
-            <NoResultsReset onReset={() => setSearchQuery('')} language={language} />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredMBTI.map((p) => (
-                <M3Card
-                  key={p.type}
-                  variant="outlined"
-                  className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-                  onClick={() => handleOpenDetail('mbti', p.type)}
+          <div className="space-y-4">
+            {/* Temperament Sub-tabs */}
+            <div className="flex items-center gap-2 border-b border-outline-variant pb-2 overflow-x-auto">
+              {[
+                { id: 'all', label: { id: 'Semua 16 Tipe', en: 'All 16 Types' } },
+                { id: 'analysts', label: { id: 'Analis (Analysts)', en: 'Analysts (_NT_)' } },
+                { id: 'diplomats', label: { id: 'Diplomat (Diplomats)', en: 'Diplomats (_NF_)' } },
+                { id: 'sentinels', label: { id: 'Pengawal (Sentinels)', en: 'Sentinels (_S_J)' } },
+                { id: 'explorers', label: { id: 'Penjelajah (Explorers)', en: 'Explorers (_S_P)' } },
+              ].map((sub) => (
+                <button
+                  key={sub.id}
+                  onClick={() => setMbtiTemperament(sub.id as any)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer whitespace-nowrap ${
+                    mbtiTemperament === sub.id
+                      ? 'bg-primary text-on-primary shadow-xs'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xl font-black text-primary group-hover:underline">{p.type}</span>
-                      <div className="flex gap-1">
-                        {p.cognitiveStack.map((fn) => (
-                          <span key={fn} className="text-[10px] font-bold bg-primary-container text-on-primary-container px-1.5 py-0.5 rounded">
-                            {fn}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <h3 className="font-bold text-sm text-on-surface mb-1">{p.title[language]}</h3>
-                    <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
-                      {p.description[language]}
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
-                    <span className="text-outline italic">{p.nickname[language]}</span>
-                    <span className="text-primary font-bold inline-flex items-center gap-0.5">
-                      {language === 'id' ? 'Buka Detail' : 'Full Detail'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                    </span>
-                  </div>
-                </M3Card>
+                  {sub.label[language]}
+                </button>
               ))}
             </div>
-          )
+
+            {filteredMBTI.length === 0 ? (
+              <NoResultsReset onReset={() => { setSearchQuery(''); setMbtiTemperament('all'); }} language={language} />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredMBTI.map((p) => (
+                  <M3Card
+                    key={p.type}
+                    variant="outlined"
+                    className="p-5 bg-surface-container hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                    onClick={() => handleOpenDetail('mbti', p.type)}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xl font-black text-primary group-hover:underline">{p.type}</span>
+                        <div className="flex gap-1">
+                          {p.cognitiveStack.map((fn) => (
+                            <span key={fn} className="text-[10px] font-bold bg-primary-container text-on-primary-container px-1.5 py-0.5 rounded">
+                              {fn}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-sm text-on-surface mb-1">{p.title[language]}</h3>
+                      <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                        {p.description[language]}
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
+                      <span className="text-outline italic">{p.nickname[language]}</span>
+                      <span className="text-primary font-bold inline-flex items-center gap-0.5">
+                        {language === 'id' ? 'Buka Detail' : 'Full Detail'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                      </span>
+                    </div>
+                  </M3Card>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Enneagram Section */}
@@ -600,7 +636,7 @@ export const ReferenceLibraryView: React.FC = () => {
                         </p>
                       </div>
                       <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between text-[11px]">
-                        <span className="text-outline truncate max-w-[220px]">
+                        <span className="text-outline truncate max-w-55">
                           {prof.traits[0] ? prof.traits[0][language] : ''}
                         </span>
                         <span className="text-primary font-bold inline-flex items-center gap-0.5 shrink-0">

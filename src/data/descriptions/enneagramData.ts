@@ -149,6 +149,7 @@ export const TRITYPE_ARCHETYPES: Record<string, { title: LocalizedString; descri
   '479': { title: { id: 'Sang Pengelana Lembut', en: 'The Gentle Spirit' }, description: { id: 'Imajinatif, ceria, dan penuh estetika spiritual.', en: 'Ethereal, whimsical, and artistically compassionate.' } },
   '259': { title: { id: 'Sang Pendengar Sabar', en: 'The Problem Solver' }, description: { id: 'Penuh empati tenang, analitis, dan tidak menuntut.', en: 'Empathetic, quietly observant, and peaceful.' } },
   '269': { title: { id: 'Sang Sahabat Sejati', en: 'The Good Samaritan' }, description: { id: 'Sangat setia, hangat, dan selalu ada untuk orang lain.', en: 'Steadfastly warm, reliable, and humble helper.' } },
+  '279': { title: { id: 'Sang Penebar Kedamaian', en: 'The Peacemaker' }, description: { id: 'Ramah, ceria, menghindari konflik, dan mencintai harmoni hangat.', en: 'Gentle, optimistic, conflict-avoidant, and warmly welcoming.' } },
 };
 
 export function getTritypeProfile(t1: number, t2: number, t3: number) {
