@@ -31,6 +31,15 @@ export const ComprehensivePassportView: React.FC = () => {
   const synergy = generateSynergyAnalysis(allResults);
 
   const handleCopySummary = () => {
+    if (completedCount === 0) {
+      alert(
+        language === 'id'
+          ? 'Belum ada data tes yang selesai untuk disalin.'
+          : 'No completed test results available to copy.'
+      );
+      return;
+    }
+
     const summaryText = `
 === ORIAS PERSONALITY TEST DOSSIER ===
 MBTI: ${allResults.mbti?.type || 'N/A'} - ${allResults.mbti?.title[language] || ''}
@@ -81,6 +90,15 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
   };
 
   const handleDownloadCard = () => {
+    if (completedCount === 0) {
+      alert(
+        language === 'id'
+          ? 'Belum ada data tes yang selesai. Silakan selesaikan minimal satu tes untuk mengunduh kartu dossier.'
+          : 'No completed test data found. Please complete at least one test to download your dossier card.'
+      );
+      return;
+    }
+
     const title = synergy?.compositeTitle[language] || 'Orias Personality Test Dossier';
     const archetype = synergy?.primaryArchetype[language] || 'Unified Typology Synthesis';
 
@@ -103,6 +121,15 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
   };
 
   const handleShareLink = () => {
+    if (completedCount === 0) {
+      alert(
+        language === 'id'
+          ? 'Belum ada data hasil tes untuk dibagikan. Silakan selesaikan tes terlebih dahulu.'
+          : 'No test results to share yet. Please complete a test first.'
+      );
+      return;
+    }
+
     const params = new URLSearchParams();
     if (allResults.mbti) params.set('m', allResults.mbti.type);
     if (allResults.enneagram) params.set('e', allResults.enneagram.notation);
@@ -160,7 +187,27 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
       )}
 
       {/* Top Banner / Incomplete Notice */}
-      {completedCount < 8 && (
+      {completedCount === 0 ? (
+        <div className="rounded-m3-lg bg-primary-container/30 border border-primary/30 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary text-[24px]">
+              psychology
+            </span>
+            <p className="text-xs md:text-sm text-on-surface">
+              {language === 'id'
+                ? 'Belum ada modul tes yang diselesaikan. Mulai penilaian mandiri untuk memetakan kepribadian Anda.'
+                : 'No test modules completed yet. Begin self-assessment to map your unique personality.'}
+            </p>
+          </div>
+          <M3Button
+            variant="filled"
+            size="sm"
+            onClick={() => startTest('grand_assessment')}
+          >
+            {language === 'id' ? 'Mulai Tes Lengkap' : 'Start Assessment'}
+          </M3Button>
+        </div>
+      ) : completedCount < 8 ? (
         <div className="rounded-m3-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-[24px]">
@@ -180,7 +227,7 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
             {language === 'id' ? 'Lanjutkan Tes' : 'Continue Tests'}
           </M3Button>
         </div>
-      )}
+      ) : null}
 
       {/* Grand Personality Passport Card */}
       <div className="rounded-m3-xl bg-linear-to-b from-surface-container-highest via-surface-container to-surface-container-low border-2 border-primary/40 p-6 md:p-10 shadow-lg relative overflow-hidden">
@@ -192,10 +239,14 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
               <span>Personality Passport</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-on-surface tracking-tight">
-              {synergy?.compositeTitle[language]}
+              {synergy
+                ? synergy.compositeTitle[language]
+                : (language === 'id' ? 'Dossier Belum Teridentifikasi' : 'Unidentified Dossier')}
             </h1>
             <p className="text-sm md:text-base font-semibold text-primary mt-1">
-              {synergy?.primaryArchetype[language]}
+              {synergy
+                ? synergy.primaryArchetype[language]
+                : (language === 'id' ? 'Belum Ada Profil • Selesaikan Minimal 1 Modul Tes' : 'No Profile Yet • Complete at least 1 test module')}
             </p>
           </div>
 
@@ -454,6 +505,33 @@ Moral Alignment: ${allResults.alignment?.alignment || 'N/A'}
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Empty State Invitation when no tests completed */}
+        {!synergy && (
+          <div className="pt-8 text-center max-w-md mx-auto space-y-4 py-8 border-t border-outline-variant/80">
+            <div className="w-16 h-16 rounded-full bg-primary-container text-primary mx-auto flex items-center justify-center shadow-xs">
+              <span className="material-symbols-outlined text-[32px]">assignment_turned_in</span>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base md:text-lg font-bold text-on-surface">
+                {language === 'id' ? 'Belum Ada Hasil Tes yang Tercatat' : 'No Test Results Recorded Yet'}
+              </h3>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                {language === 'id'
+                  ? 'Pilih salah satu modul tes pada matriks 8 sistem di atas atau mulai Grand Assessment untuk membentuk profil kepribadian terpadu Anda.'
+                  : 'Select any test module from the 8-system matrix above or begin the Grand Assessment to construct your unified personality dossier.'}
+              </p>
+            </div>
+            <M3Button
+              variant="filled"
+              size="md"
+              icon="play_arrow"
+              onClick={() => startTest('mbti')}
+            >
+              {language === 'id' ? 'Mulai Tes Pertama (MBTI)' : 'Start First Test (MBTI)'}
+            </M3Button>
           </div>
         )}
       </div>

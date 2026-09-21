@@ -38,9 +38,6 @@ export const M3TopAppBar: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-lg md:text-xl tracking-tight text-on-surface">OPT</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-primary-container text-on-primary-container px-2 py-0.5 rounded-full">
-                M3
-              </span>
             </div>
             <p className="text-xs text-on-surface-variant hidden sm:block">
               {language === 'id' ? 'Pusat Tes Kepribadian Komprehensif' : 'Unified Personality Diagnostics'}
